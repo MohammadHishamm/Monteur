@@ -1,0 +1,132 @@
+services:
+  # -----------------------------
+  # PostgreSQL Database
+  # -----------------------------
+  db:
+    image: postgres:16.3
+    container_name: ariatoon-postgres-db
+    env_file: .env
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - ariatoon-app-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      start_period: 30s
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # -----------------------------
+  # Redis Database
+  # -----------------------------
+  redis:
+    image: redis:7.2
+    container_name: ariatoon-redis-db
+    command: redis-server --save 60 1 --appendonly yes --replica-read-only yes --requirepass ${REDIS_PASSWORD}
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    volumes:
+      - redis-data:/data
+    ports:
+      - "127.0.0.1:6379:6379"
+    networks:
+      - ariatoon-app-network
+    healthcheck:
+      test: ["CMD-SHELL", 'redis-cli -a "${REDIS_PASSWORD}" ping']
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # -----------------------------
+  # RedisInsight GUI (optional)
+  # -----------------------------
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: ariatoon-redisinsight
+    ports:
+      - "5540:5540"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - ariatoon-app-network
+    restart: unless-stopped
+
+  # -----------------------------
+  # Backend Service
+  # -----------------------------
+  backend:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: ariatoon-backend:latest
+    container_name: ariatoon-api
+    env_file: .env
+
+    depends_on:
+      db:
+        condition: service_started
+      redis:
+        condition: service_started
+    networks:
+      - ariatoon-app-network
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../migrations:/app/migrations
+      - ./entrypoint.sh:/usr/local/bin/entrypoint.sh
+      - upload-data:/app/uploads
+    entrypoint: ["/bin/sh", "/usr/local/bin/entrypoint.sh"]
+    restart: unless-stopped
+    healthcheck:
+      disable: true # temporarily disable healthcheck
+
+  # -----------------------------
+  # Frontend Service
+  # -----------------------------
+  frontend:
+    build:
+      context: ../../frontend
+      dockerfile: Dockerfile
+    image: ariatoon-frontend:latest
+    container_name: ariatoon-frontend
+    depends_on:
+      backend:
+        condition: service_started
+    ports:
+      - "3000:3000"
+    networks:
+      - ariatoon-app-network
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      start_period: 30s
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# -----------------------------
+# Volumes
+# -----------------------------
+volumes:
+  db-data:
+  redis-data:
+  upload-data:
+
+# -----------------------------
+# Network
+# -----------------------------
+networks:
+  ariatoon-app-network:
+    driver: bridge

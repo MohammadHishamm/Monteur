@@ -1,0 +1,420 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Tajawal:wght@400;500;700;800;900&family=Inter:wght@400;500;600;700;800&family=Cairo:wght@700;900&display=swap");
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-background-subtle: var(--background-subtle);
+  --color-foreground: var(--foreground);
+
+  --font-sans: var(--font-geist-sans);
+  --font-display: var(--font-fraunces);
+  --font-mono: var(--font-geist-mono);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-clay: var(--clay);
+  --color-clay-foreground: var(--clay-foreground);
+  --color-gold: var(--gold);
+  --color-gold-foreground: var(--gold-foreground);
+  --color-studio-surface: var(--studio-surface);
+  --color-studio-surface-2: var(--studio-surface-2);
+  --color-emerald-accent: var(--accent-emerald);
+  --color-emerald-strong: var(--accent-emerald-strong);
+  --color-emerald-tint: var(--accent-emerald-tint);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-sand: var(--sand);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-destructive: var(--destructive);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --radius-sm: calc(var(--radius) * 0.55);
+  --radius-md: calc(var(--radius) * 0.78);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.9);
+  --radius-3xl: calc(var(--radius) * 2.6);
+  --radius-4xl: calc(var(--radius) * 3.2);
+}
+
+/* ─── Clean Studio · Bright light (only theme) ─────────────────────── */
+:root {
+  --background: #ffffff;
+  --background-subtle: #fafafa;
+  --foreground: #0f172a; /* slate-900 */
+
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+
+  --primary: #10b981; /* emerald — the single accent */
+  --primary-foreground: #ffffff;
+
+  --clay: #10b981;
+  --clay-foreground: #ffffff;
+  --gold: #f59e0b; /* rating stars only */
+  --gold-foreground: #ffffff;
+
+  --secondary: #f4f4f5;
+  --secondary-foreground: #0f172a;
+  --sand: #fafafa;
+  --muted: #f4f4f5;
+  --muted-foreground: #64748b; /* slate-500 */
+  --accent: #f4f4f5;
+  --accent-foreground: #0f172a;
+
+  --success: #10b981;
+  --warning: #f59e0b;
+  --destructive: #ef4444;
+
+  --border: #ececf0;
+  --input: #e4e7ec;
+  --ring: #10b981;
+
+  --radius: 0.75rem;
+
+  /* accent helpers */
+  --accent-emerald: #10b981;
+  --accent-emerald-strong: #059669; /* readable accent text on white */
+  --accent-emerald-tint: #ecfdf5; /* faint band background */
+  --studio-surface: #ffffff;
+  --studio-surface-2: #f4f4f5;
+
+  /* tier metallics */
+  --tier-bronze: oklch(0.62 0.12 50);
+  --tier-silver: oklch(0.6 0.015 240);
+  --tier-gold: oklch(0.7 0.14 80);
+  --tier-platinum: oklch(0.6 0.08 200);
+
+  /* charts */
+  --chart-1: #10b981;
+  --chart-2: #059669;
+  --chart-3: #f59e0b;
+  --chart-4: #64748b;
+  --chart-5: #0f172a;
+
+  /* sidebar */
+  --sidebar: #fafafa;
+  --sidebar-foreground: #0f172a;
+  --sidebar-primary: #10b981;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f4f4f5;
+  --sidebar-accent-foreground: #0f172a;
+  --sidebar-border: #ececf0;
+  --sidebar-ring: #10b981;
+
+  /* elevation — soft, subtle */
+  --shadow-soft: 0 1px 2px rgba(15, 23, 42, 0.04),
+    0 6px 20px rgba(15, 23, 42, 0.05);
+  --shadow-lift: 0 2px 6px rgba(15, 23, 42, 0.06),
+    0 18px 40px rgba(15, 23, 42, 0.09);
+}
+
+/* ─── Studio · Dark theme (default) ─────────────────────── */
+.dark {
+  --background: #0b0b0f;
+  --background-subtle: #141420;
+  --foreground: #f5f5fa;
+
+  --card: #141420;
+  --card-foreground: #f5f5fa;
+  --popover: #141420;
+  --popover-foreground: #f5f5fa;
+
+  --primary: #ec4899;
+  --primary-foreground: #ffffff;
+
+  --clay: #ec4899;
+  --clay-foreground: #ffffff;
+  --gold: #f59e0b;
+  --gold-foreground: #1a1a22;
+
+  --secondary: #1c1c2b;
+  --secondary-foreground: #f5f5fa;
+  --sand: #141420;
+  --muted: #1c1c2b;
+  --muted-foreground: #8b8b9e;
+  --accent: #1c1c2b;
+  --accent-foreground: #f5f5fa;
+
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --destructive: #f87171;
+
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.12);
+  --ring: #ec4899;
+
+  /* studio custom */
+  --studio-surface: #141420;
+  --studio-surface-2: #1c1c2b;
+  --studio-pink: #ec4899;
+  --studio-blue: #3b82f6;
+  --studio-green: #22c55e;
+  --studio-amber: #f59e0b;
+  --studio-chrome: #1c1c2b;
+
+  /* tier metallics */
+  --tier-bronze: oklch(0.68 0.12 50);
+  --tier-silver: oklch(0.72 0.015 240);
+  --tier-gold: oklch(0.78 0.14 80);
+  --tier-platinum: oklch(0.7 0.08 200);
+
+  /* charts */
+  --chart-1: #ec4899;
+  --chart-2: #3b82f6;
+  --chart-3: #f59e0b;
+  --chart-4: #22c55e;
+  --chart-5: #a78bfa;
+
+  /* sidebar */
+  --sidebar: #141420;
+  --sidebar-foreground: #f5f5fa;
+  --sidebar-primary: #ec4899;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #1c1c2b;
+  --sidebar-accent-foreground: #f5f5fa;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-ring: #ec4899;
+
+  /* elevation */
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-lift: 0 2px 6px rgba(0, 0, 0, 0.5), 0 16px 48px rgba(0, 0, 0, 0.6);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: "IBM Plex Sans Arabic", var(--font-geist-sans), sans-serif;
+  }
+  html {
+    font-family: "IBM Plex Sans Arabic", var(--font-geist-sans), sans-serif;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: "IBM Plex Sans Arabic", var(--font-geist-sans), sans-serif;
+    letter-spacing: 0;
+    font-optical-sizing: auto;
+  }
+  ::selection {
+    background: oklch(0.97 0.008 80 / 0.2);
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-fraunces), Georgia, serif;
+  }
+  .font-mono {
+    font-family: var(--font-geist-mono), ui-monospace, monospace;
+  }
+
+  /* mono eyebrow label */
+  .eyebrow {
+    font-family: var(--font-geist-mono), ui-monospace, monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: 0.72rem;
+    font-weight: 500;
+  }
+
+  .shadow-soft {
+    box-shadow: var(--shadow-soft);
+  }
+  .shadow-lift {
+    box-shadow: var(--shadow-lift);
+  }
+
+  .text-clay {
+    color: var(--clay);
+  }
+  .text-gold {
+    color: var(--gold);
+  }
+  .bg-sand {
+    background-color: var(--sand);
+  }
+
+  /* hairline divider */
+  .rule {
+    border: none;
+    border-top: 1px solid var(--border);
+  }
+
+  /* light gradient wash for hero areas */
+  .wash-warm {
+    background:
+      radial-gradient(
+        120% 90% at 85% -10%,
+        oklch(0.97 0.008 80 / 0.1),
+        transparent 55%
+      ),
+      radial-gradient(
+        110% 80% at 0% 0%,
+        oklch(0.97 0.008 80 / 0.08),
+        transparent 50%
+      );
+  }
+}
+@theme inline {
+  --animate-cell-ripple: cell-ripple var(--duration, 200ms) ease-out none 1
+    var(--delay, 0ms);
+
+  @keyframes cell-ripple {
+    0% {
+      opacity: 0.4;
+    }
+    50% {
+      opacity: 0.8;
+    }
+    100% {
+      opacity: 0.4;
+    }
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes float-alt {
+  0%,
+  100% {
+    transform: translateY(0px) rotate(-1deg);
+  }
+  50% {
+    transform: translateY(-7px) rotate(1deg);
+  }
+}
+
+@keyframes shimmer-slide {
+  0% {
+    background-position: 200% center;
+  }
+  100% {
+    background-position: -200% center;
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spin-very-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@layer utilities {
+  .animate-float {
+    animation: float 5s ease-in-out infinite;
+  }
+  .animate-float-alt {
+    animation: float-alt 6s ease-in-out 1.5s infinite;
+  }
+  .animate-fade-up {
+    animation: fade-up 0.6s ease-out forwards;
+  }
+  .animate-spin-very-slow {
+    animation: spin-very-slow 30s linear infinite;
+  }
+
+  /* Gradient text utility */
+  .text-gradient-primary {
+    background: linear-gradient(135deg, var(--primary), var(--gold));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Shimmer border for featured cards */
+  .border-shimmer {
+    background:
+      linear-gradient(var(--card), var(--card)) padding-box,
+      linear-gradient(90deg, var(--primary), var(--gold), var(--primary))
+        border-box;
+    border: 1px solid transparent;
+  }
+
+  /* Cairo display font — bold Arabic headings */
+  .font-cairo {
+    font-family: "Cairo", "IBM Plex Sans Arabic", sans-serif;
+    font-weight: 900;
+  }
+
+  /* Studio — Tajawal display for big Arabic headings */
+  .font-display-ar {
+    font-family: "Tajawal", "IBM Plex Sans Arabic", sans-serif;
+    font-weight: 800;
+  }
+
+  /* Studio — Inter for Latin labels, timecodes, scores */
+  .font-tech {
+    font-family: "Inter", var(--font-geist-sans), sans-serif;
+    font-feature-settings: "tnum" 1;
+    letter-spacing: -0.01em;
+  }
+
+  /* tabular numerals — timecodes / match scores don't jump */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+
+}
