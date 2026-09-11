@@ -28,6 +28,10 @@ func (h *Handler) HandleNotificationWebSocket(w http.ResponseWriter, r *http.Req
 
 	userID, err := h.resolveAuthenticatedUserID(r)
 	if err != nil {
+		if errors.Is(err, apperror.ErrInternalServer) {
+			common.ServeInternalServerResponse(w, r, err)
+			return
+		}
 		common.ServeUnauthorizedErrorResponse(w, r, err)
 		return
 	}
@@ -107,10 +111,16 @@ func (h *Handler) resolveAuthenticatedUserID(r *http.Request) (string, error) {
 	// Verify user exists, is active, and is not banned.
 	if h.store != nil && h.store.User != nil {
 		u, err := h.store.User.FindByID(r.Context(), *sess.UserID)
-		if err != nil || u == nil {
+		if err != nil {
+			return "", apperror.ErrInternalServer
+		}
+		if u == nil {
 			return "", apperror.ErrUserNotFound
 		}
-		if !u.IsActive && !u.Is_activated {
+		if !u.IsActive {
+			return "", apperror.ErrUserNotAuthenticated.WithDetail("account is not active")
+		}
+		if !u.IsEmailVerified && !u.Is_activated {
 			return "", apperror.ErrUserNotAuthenticated.WithDetail("account not activated")
 		}
 		if u.IsBanned {

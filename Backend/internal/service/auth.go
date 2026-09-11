@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -16,6 +17,7 @@ import (
 	"github.com/boj/redistore"
 	"github.com/google/uuid"
 	"github.com/gorilla/sessions"
+	"github.com/lib/pq"
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/gothic"
 	"github.com/markbates/goth/providers/discord"
@@ -306,15 +308,20 @@ func (s *AuthService) GetRequestSession(r *http.Request, fetchUser bool) (*entit
 				}
 
 				data := entity.NewSession(&parsedUID, provider, &roleNames)
+				data.WithRawSession(&sessions.Session{ID: parsedUID.String()})
 				data.WithAccessToken(jwtToken)
 
-				if fetchUser {
-					u, err := s.userSrv.GetUserByID(r.Context(), &parsedUID)
-					if err != nil {
-						return nil, err
-					}
-					data.WithUser(u)
+				u, err := s.userSrv.GetUserByID(r.Context(), &parsedUID)
+				if err != nil {
+					return nil, err
 				}
+				if u.IsBanned {
+					return nil, apperror.ErrUserAlreadyBanned
+				}
+				if !u.IsActive {
+					return nil, apperror.ErrUserNotAuthenticated.WithDetail("account is not active")
+				}
+				data.WithUser(u)
 
 				common.Logger.Debug("authenticated request via verified JWT token",
 					slog.String("userID", parsedUID.String()),
@@ -695,7 +702,10 @@ type AuthResult struct {
 // AuthenticateWithEmail verifies credentials, checks activation, and produces access and refresh tokens.
 func (s *AuthService) AuthenticateWithEmail(ctx context.Context, email, password, ip, ua string) (*AuthResult, error) {
 	u, err := s.userSrv.GetUserByEmail(ctx, email)
-	if err != nil || u == nil {
+	if err != nil {
+		return nil, apperror.ErrInternalServer
+	}
+	if u == nil {
 		return nil, apperror.ErrUserNotAuthenticated
 	}
 
@@ -738,39 +748,48 @@ func (s *AuthService) AuthenticateWithEmail(ctx context.Context, email, password
 
 // RegisterWithEmail checks availability, creates user, stores password, and generates credentials.
 func (s *AuthService) RegisterWithEmail(ctx context.Context, req *entity.EmailAuthRequest, ip, ua string) (*AuthResult, error) {
-	existingUser, err := s.userSrv.FindByEmail(ctx, req.Email)
+	fullName := req.UserName
+	if req.FirstName != nil {
+		fullName = strings.TrimSpace(*req.FirstName)
+	}
+	if req.LastName != nil {
+		if fullName != "" {
+			fullName += " "
+		}
+		fullName += strings.TrimSpace(*req.LastName)
+	}
+	if fullName == "" {
+		fullName = strings.Split(req.Email, "@")[0]
+	}
+
+	u, err := s.userSrv.Create(ctx, req.Email, req.Password, fullName, "", req.UserType)
 	if err != nil {
-		return nil, err
-	}
-	if existingUser != nil {
-		return nil, apperror.ErrUserEmailAlreadyExists
-	}
-
-	hashedPassword, err := common.HashPassword(req.Password)
-	if err != nil {
-		return nil, err
-	}
-
-	userReq := entity.UserCreateRequest{
-		UserName:  req.UserName,
-		Email:     req.Email,
-		FirstName: req.FirstName,
-		LastName:  req.LastName,
-		AvatarURL: req.AvatarURL,
-		UserType:  req.UserType,
-	}
-
-	u, err := s.userSrv.CreateOrUpdateUser(ctx, &userReq)
-	if err != nil {
+		if errors.Is(err, apperror.ErrUserAlreadyExists) || errors.Is(err, apperror.ErrUserEmailAlreadyExists) {
+			return nil, apperror.ErrUserEmailAlreadyExists
+		}
+		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
+			return nil, apperror.ErrUserEmailAlreadyExists
+		}
 		return nil, err
 	}
 
-	if err := s.userSrv.CreatePassword(ctx, &u.ID, hashedPassword); err != nil {
-		return nil, err
-	}
-
-	if _, err := s.userSrv.UpdateUserStatus(ctx, u.ID, true); err != nil {
-		return nil, err
+	// Only immediately activate in development mode to allow local testing without SMTP.
+	// In production, users must verify their email via /auth/activate before receiving access credentials.
+	isDev := config.Configs != nil && config.Configs.Env != nil && config.Configs.Env.IsDev()
+	if isDev {
+		if _, err := s.userSrv.UpdateUserStatus(ctx, u.ID, true); err != nil {
+			return nil, err
+		}
+		u.IsEmailVerified = true
+		u.Is_activated = true
+	} else {
+		// In production, do not activate or generate session tokens.
+		// Return the unactivated user so the handler can send activation email.
+		return &AuthResult{
+			User:      u,
+			TokenType: "Bearer",
+			Roles:     []string{req.UserType},
+		}, nil
 	}
 
 	roles := make([]string, len(u.Roles))

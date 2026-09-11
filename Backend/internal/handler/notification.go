@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/OmarHosny18/APP-frontend/common"
+	"github.com/OmarHosny18/APP-frontend/internal/apperror"
 	"github.com/OmarHosny18/APP-frontend/internal/entity"
 	"github.com/OmarHosny18/APP-frontend/internal/realtime"
 	"github.com/go-chi/chi/v5"
@@ -103,15 +104,22 @@ func (h *Handler) HandleCreateNotifications(w http.ResponseWriter, r *http.Reque
 }
 
 func (h *Handler) HandleListNotifications(w http.ResponseWriter, r *http.Request) {
-	userID := strings.TrimSpace(r.URL.Query().Get("user_id"))
-	if userID == "" {
-		resolved, err := h.resolveAuthenticatedUserID(r)
-		if err != nil {
-			common.ServeUnauthorizedErrorResponse(w, r, err)
+	resolvedUserID, err := h.resolveAuthenticatedUserID(r)
+	if err != nil {
+		if errors.Is(err, apperror.ErrInternalServer) {
+			common.ServeInternalServerResponse(w, r, err)
 			return
 		}
-		userID = resolved
+		common.ServeUnauthorizedErrorResponse(w, r, err)
+		return
 	}
+
+	if queryUserID := strings.TrimSpace(r.URL.Query().Get("user_id")); queryUserID != "" && queryUserID != resolvedUserID {
+		common.ServeForbiddenResponse(w, r)
+		return
+	}
+
+	userID := resolvedUserID
 
 	limit := 20
 	if raw := strings.TrimSpace(r.URL.Query().Get("limit")); raw != "" {
@@ -154,15 +162,22 @@ func (h *Handler) HandleMarkNotificationRead(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	userID := strings.TrimSpace(r.URL.Query().Get("user_id"))
-	if userID == "" {
-		resolved, err := h.resolveAuthenticatedUserID(r)
-		if err != nil {
-			common.ServeUnauthorizedErrorResponse(w, r, err)
+	resolvedUserID, err := h.resolveAuthenticatedUserID(r)
+	if err != nil {
+		if errors.Is(err, apperror.ErrInternalServer) {
+			common.ServeInternalServerResponse(w, r, err)
 			return
 		}
-		userID = resolved
+		common.ServeUnauthorizedErrorResponse(w, r, err)
+		return
 	}
+
+	if queryUserID := strings.TrimSpace(r.URL.Query().Get("user_id")); queryUserID != "" && queryUserID != resolvedUserID {
+		common.ServeForbiddenResponse(w, r)
+		return
+	}
+
+	userID := resolvedUserID
 
 	updated, err := h.service.MarkNotificationRead(r.Context(), id, userID)
 	if err != nil {

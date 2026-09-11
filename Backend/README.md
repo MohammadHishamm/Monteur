@@ -196,6 +196,7 @@ Backend/
 │   ├── store/            # Data access layer
 │   ├── cache/            # Redis cache abstraction
 │   ├── ratelimiter/      # Rate limiting middleware
+│   ├── realtime/         # WebSocket Hub & real-time messaging
 │   ├── entity/           # Domain models
 │   └── apperror/         # Error handling
 ├── common/               # Shared utilities

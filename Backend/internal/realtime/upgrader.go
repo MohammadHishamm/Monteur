@@ -33,11 +33,13 @@ func checkOrigin(r *http.Request) bool {
 	}
 
 	allowed := []string{frontend, "http://localhost:3000"}
+	cleanOrigin := strings.TrimRight(strings.TrimRight(origin, "/"), ":")
 	for _, item := range allowed {
 		if item == "" {
 			continue
 		}
-		if strings.EqualFold(strings.TrimRight(item, "/"), strings.TrimRight(origin, "/")) {
+		cleanItem := strings.TrimRight(strings.TrimRight(item, "/"), ":")
+		if strings.EqualFold(cleanItem, cleanOrigin) {
 			return true
 		}
 	}

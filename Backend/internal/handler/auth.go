@@ -386,6 +386,28 @@ func (h *Handler) HandleEmailSignup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// In production, user requires email activation before sessions/tokens are issued.
+	if !authRes.User.IsEmailVerified && !authRes.User.Is_activated {
+		if h.mailer != nil {
+			activationToken, err := common.GenerateAccessToken(authRes.User.ID.String(), "activation", []string{"activation"})
+			if err == nil {
+				_ = h.mailer.SendEmailActivation(authRes.User.Email, activationToken)
+			}
+		}
+
+		common.WriteJson(w, http.StatusCreated, common.DataEnvelope{Data: map[string]interface{}{
+			"user": map[string]interface{}{
+				"id":        authRes.User.ID,
+				"email":     authRes.User.Email,
+				"full_name": authRes.User.FullName,
+				"user_type": req.UserType,
+			},
+			"message":      "Please check your email to activate your account.",
+			"is_activated": false,
+		}})
+		return
+	}
+
 	provider := h.service.Auth.ValidateProvider("email")
 	if _, err = h.service.Auth.CreateSessionUser(w, r, authRes.User, provider, authRes.AccessToken, authRes.RefreshToken); err != nil {
 		common.ServeInternalServerResponse(w, r.WithContext(ctx), err)
@@ -479,7 +501,11 @@ func (h *Handler) HandleEmailSignin(w http.ResponseWriter, r *http.Request) {
 
 	authRes, err := h.service.Auth.AuthenticateWithEmail(ctx, req.Email, req.Password, common.GetIPAddr(r), common.GetUserAgent(r))
 	if err != nil {
-		common.ServeUnauthorizedErrorResponse(w, r.WithContext(ctx), err)
+		if errors.Is(err, apperror.ErrUserNotAuthenticated) {
+			common.ServeUnauthorizedErrorResponse(w, r.WithContext(ctx), err)
+			return
+		}
+		common.ServeInternalServerResponse(w, r.WithContext(ctx), err)
 		return
 	}
 
@@ -544,7 +570,11 @@ func (h *Handler) HandleRefreshToken(w http.ResponseWriter, r *http.Request) {
 		common.GetUserAgent(r),
 	)
 	if err != nil {
-		common.ServeUnauthorizedErrorResponse(w, r.WithContext(ctx), err)
+		if errors.Is(err, apperror.ErrUserNotAuthenticated) {
+			common.ServeUnauthorizedErrorResponse(w, r.WithContext(ctx), err)
+			return
+		}
+		common.ServeInternalServerResponse(w, r.WithContext(ctx), err)
 		return
 	}
 
@@ -554,7 +584,11 @@ func (h *Handler) HandleRefreshToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	u, err := h.service.User.GetUserByID(ctx, sess.UserID)
-	if err != nil || u == nil {
+	if err != nil {
+		common.ServeInternalServerResponse(w, r.WithContext(ctx), err)
+		return
+	}
+	if u == nil {
 		common.ServeUnauthorizedErrorResponse(w, r.WithContext(ctx), apperror.ErrUserNotAuthenticated)
 		return
 	}

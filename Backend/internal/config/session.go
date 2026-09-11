@@ -85,6 +85,11 @@ func NewSessionStoreOptions(env *Env, url *URL, path, host string, maxAge int) *
 		isSecure = true
 	}
 
+	sameSite := http.SameSiteLaxMode
+	if isSecure {
+		sameSite = http.SameSiteNoneMode
+	}
+
 	return &sessions.Options{
 		Path:   path,
 		MaxAge: maxAge,
@@ -93,7 +98,7 @@ func NewSessionStoreOptions(env *Env, url *URL, path, host string, maxAge int) *
 		// JavaScript (XSS protection). It is independent of the transport scheme.
 		HttpOnly: true,
 		Domain:   domain,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: sameSite,
 	}
 }
 

@@ -70,8 +70,13 @@ func (h *Handler) WithRequiredAuth(next http.Handler) http.Handler {
 			return
 		}
 
+		sessionID := ""
+		if sess != nil && sess.Raw != nil {
+			sessionID = sess.Raw.ID
+		}
+
 		common.Logger.Info("authenticated user access allowed",
-			slog.Any("sessionID", sess.Raw.ID),
+			slog.String("sessionID", sessionID),
 			slog.String("component", "handler.middleware"),
 			slog.String("method", "WithRequiredAuth"))
 
@@ -110,11 +115,16 @@ func (h *Handler) WithRequiredGuest(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		sess, err := h.service.Auth.GetRequestSession(r, false)
 		if err != nil || sess.IsAuth() {
+			sessionID := ""
+			if sess != nil && sess.Raw != nil {
+				sessionID = sess.Raw.ID
+			}
+
 			common.Logger.Error("authenticated user access",
 				slog.String("error", "require a guest access"),
 				slog.Any("error", err),
 				slog.Any("session", sess),
-				slog.Any("sessionID", sess.Raw.ID),
+				slog.String("sessionID", sessionID),
 				slog.Bool("isAuth", sess.IsAuth()),
 				slog.String("component", "handler.middleware"),
 				slog.String("method", "WithRequiredGuest"))
