@@ -1,0 +1,47 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Go build artifacts
+bin/
+build/
+dist/
+*.log
+
+# Dependency directories (if any vendoring)
+vendor/
+
+# Environment files
+.env
+.env.*
+!.env.example  # Keep example env files
+
+# IDE / Editor configs
+.vscode/
+.idea/
+*.swp
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-data/
+db_data/
+*.pid
+*.sock
+
+# Coverage and testing
+coverage.out
+*.coverprofile
+
+# Temporary files
+tmp/
+uploads/
+script/
