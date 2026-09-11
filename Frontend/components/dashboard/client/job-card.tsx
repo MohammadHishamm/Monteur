@@ -111,7 +111,7 @@ export function JobCard({
             <button
               type="button"
               onClick={onClose}
-              className="inline-flex h-10 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold transition-opacity hover:opacity-80"
+              className="inline-flex h-10 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-opacity hover:opacity-80"
               style={{ border: `1px solid ${P.border}`, color: P.muted }}
             >
               إغلاق
@@ -121,7 +121,7 @@ export function JobCard({
             type="button"
             onClick={onToggle}
             aria-expanded={open}
-            className="inline-flex h-10 items-center gap-1.5 rounded-xl px-4 text-sm font-semibold transition-opacity hover:opacity-80"
+            className="inline-flex h-10 items-center gap-1.5 rounded-lg px-4 text-sm font-semibold transition-opacity hover:opacity-80"
             style={{
               background: `${P.primary}14`,
               color: P.primaryText,

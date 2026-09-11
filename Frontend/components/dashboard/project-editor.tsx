@@ -275,9 +275,6 @@ export function ProjectEditor({
   onRemove: () => void;
 }) {
   const isNew = p.id.startsWith("new-");
-  function set(next: Partial<EditableProject>) {
-    onChange({ ...p, ...next });
-  }
 
   return (
     <div style={{ border: `1px solid ${P.border}` }}>
@@ -311,7 +308,7 @@ export function ProjectEditor({
         <button
           type="button"
           onClick={onToggle}
-          className="inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-sm font-semibold transition-colors hover:bg-black/5"
+          className="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold transition-colors hover:bg-black/5"
           style={{ border: `1px solid ${P.border}`, color: P.text }}
         >
           {open ? (
@@ -330,108 +327,127 @@ export function ProjectEditor({
 
       {/* expanded editor */}
       {open && (
-        <div
-          className="flex flex-col gap-4 border-t p-5"
-          style={{ borderColor: P.border }}
-        >
-          <Field label="عنوان المشروع">
-            <input
-              className={inputCls}
-              value={p.title}
-              onChange={(e) => set({ title: e.target.value })}
-              placeholder="مثال: منصة تجارة إلكترونية متكاملة"
-            />
-          </Field>
-
-          <Field label="وصف من سطر واحد" hint="يظهر على بطاقة المشروع.">
-            <input
-              className={inputCls}
-              maxLength={130}
-              value={p.summary}
-              onChange={(e) => set({ summary: e.target.value })}
-              placeholder="ملخّص سريع لما أنجزته في هذا المشروع"
-            />
-          </Field>
-
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Field label="التخصص">
-              <select
-                className={inputCls}
-                value={p.category}
-                onChange={(e) => set({ category: e.target.value as Category })}
-              >
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {CATEGORY_LABELS[c]}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="السنة">
-              <input
-                className={inputCls}
-                value={p.year}
-                onChange={(e) => set({ year: e.target.value })}
-                placeholder="٢٠٢٥"
-              />
-            </Field>
-            <Field label="المدة">
-              <input
-                className={inputCls}
-                value={p.duration}
-                onChange={(e) => set({ duration: e.target.value })}
-                placeholder="٨ أسابيع"
-              />
-            </Field>
-          </div>
-
-          <Field label="رابط العمل (اختياري)">
-            <div className="relative">
-              <ExternalLink
-                className="pointer-events-none absolute inset-y-0 inset-s-3 my-auto size-4"
-                style={{ color: P.muted }}
-              />
-              <input
-                className={`${inputCls} ps-9`}
-                value={p.liveUrl ?? ""}
-                onChange={(e) => set({ liveUrl: e.target.value })}
-                placeholder="https://"
-                dir="ltr"
-              />
-            </div>
-          </Field>
-
-          <Field label="وصف المشروع">
-            <textarea
-              rows={4}
-              className={`${inputCls} resize-y leading-relaxed`}
-              value={p.description}
-              onChange={(e) => set({ description: e.target.value })}
-              placeholder="نظرة عامة على المشروع وما حقّقه…"
-            />
-          </Field>
-
-          <Field
-            label="فيديو المشروع"
-            hint="MP4 حتى ٣٠٠MB. يُعرض عند الضغط على الصورة المصغّرة."
-          >
-            <VideoField
-              videoUrl={p.videoUrl ?? ""}
-              onChange={(videoUrl) => set({ videoUrl })}
-            />
-          </Field>
-
-          <Field
-            label="الصورة المصغّرة (Thumbnail)"
-            hint="صورة واحدة تظهر كغلاف للفيديو."
-          >
-            <ThumbnailField
-              image={p.images[0] ?? ""}
-              onChange={(img) => set({ images: img ? [img] : [] })}
-            />
-          </Field>
+        <div className="border-t" style={{ borderColor: P.border }}>
+          <ProjectFields project={p} onChange={onChange} />
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * The case-study form fields on their own — used inside ProjectEditor and by
+ * the portfolio (أعمالي) page's add/edit panel.
+ */
+export function ProjectFields({
+  project: p,
+  onChange,
+}: {
+  project: EditableProject;
+  onChange: (next: EditableProject) => void;
+}) {
+  function set(next: Partial<EditableProject>) {
+    onChange({ ...p, ...next });
+  }
+
+  return (
+    <div className="flex flex-col gap-4 p-5">
+      <Field label="عنوان المشروع">
+        <input
+          className={inputCls}
+          value={p.title}
+          onChange={(e) => set({ title: e.target.value })}
+          placeholder="مثال: منصة تجارة إلكترونية متكاملة"
+        />
+      </Field>
+
+      <Field label="وصف من سطر واحد" hint="يظهر على بطاقة المشروع.">
+        <input
+          className={inputCls}
+          maxLength={130}
+          value={p.summary}
+          onChange={(e) => set({ summary: e.target.value })}
+          placeholder="ملخّص سريع لما أنجزته في هذا المشروع"
+        />
+      </Field>
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Field label="التخصص">
+          <select
+            className={inputCls}
+            value={p.category}
+            onChange={(e) => set({ category: e.target.value as Category })}
+          >
+            {CATEGORIES.map((c) => (
+              <option key={c} value={c}>
+                {CATEGORY_LABELS[c]}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="السنة">
+          <input
+            className={inputCls}
+            value={p.year}
+            onChange={(e) => set({ year: e.target.value })}
+            placeholder="٢٠٢٥"
+          />
+        </Field>
+        <Field label="المدة">
+          <input
+            className={inputCls}
+            value={p.duration}
+            onChange={(e) => set({ duration: e.target.value })}
+            placeholder="٨ أسابيع"
+          />
+        </Field>
+      </div>
+
+      <Field label="رابط العمل (اختياري)">
+        <div className="relative">
+          <ExternalLink
+            className="pointer-events-none absolute inset-y-0 inset-s-3 my-auto size-4"
+            style={{ color: P.muted }}
+          />
+          <input
+            className={`${inputCls} ps-9`}
+            value={p.liveUrl ?? ""}
+            onChange={(e) => set({ liveUrl: e.target.value })}
+            placeholder="https://"
+            dir="ltr"
+          />
+        </div>
+      </Field>
+
+      <Field label="وصف المشروع">
+        <textarea
+          rows={4}
+          className={`${inputCls} resize-y leading-relaxed`}
+          value={p.description}
+          onChange={(e) => set({ description: e.target.value })}
+          placeholder="نظرة عامة على المشروع وما حقّقه…"
+        />
+      </Field>
+
+      <Field
+        label="فيديو المشروع"
+        hint="MP4 حتى ٣٠٠MB. يُعرض عند الضغط على الصورة المصغّرة."
+      >
+        <VideoField
+          videoUrl={p.videoUrl ?? ""}
+          onChange={(videoUrl) => set({ videoUrl })}
+        />
+      </Field>
+
+      <Field
+        label="الصورة المصغّرة (Thumbnail)"
+        hint="صورة واحدة تظهر كغلاف للفيديو."
+      >
+        <ThumbnailField
+          image={p.images[0] ?? ""}
+          onChange={(img) => set({ images: img ? [img] : [] })}
+        />
+      </Field>
     </div>
   );
 }

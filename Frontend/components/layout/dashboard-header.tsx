@@ -46,9 +46,17 @@ interface DashboardHeaderProps {
   };
   notifications?: number;
   onMenuClick?: () => void;
+  /** Hide the menu button on lg+ screens, where the sidebar is always visible. */
+  persistentSidebar?: boolean;
 }
 
-export function DashboardHeader({ userRole, user, notifications = 0, onMenuClick }: DashboardHeaderProps) {
+export function DashboardHeader({
+  userRole,
+  user,
+  notifications = 0,
+  onMenuClick,
+  persistentSidebar = false,
+}: DashboardHeaderProps) {
   const pathname = usePathname();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -312,7 +320,7 @@ export function DashboardHeader({ userRole, user, notifications = 0, onMenuClick
         <div className="flex min-w-0 items-center gap-2 lg:gap-4">
           <button
             onClick={onMenuClick}
-            className="inline-flex size-9 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            className={`inline-flex size-9 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground${persistentSidebar ? " lg:hidden" : ""}`}
             aria-label="فتح القائمة"
           >
             <Menu className="size-4" />
