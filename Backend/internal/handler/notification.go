@@ -10,6 +10,7 @@ import (
 
 	"github.com/OmarHosny18/APP-frontend/common"
 	"github.com/OmarHosny18/APP-frontend/internal/entity"
+	"github.com/OmarHosny18/APP-frontend/internal/realtime"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -104,7 +105,7 @@ func (h *Handler) HandleCreateNotifications(w http.ResponseWriter, r *http.Reque
 func (h *Handler) HandleListNotifications(w http.ResponseWriter, r *http.Request) {
 	userID := strings.TrimSpace(r.URL.Query().Get("user_id"))
 	if userID == "" {
-		resolved, err := h.resolveSocketUserID(r)
+		resolved, err := h.resolveAuthenticatedUserID(r)
 		if err != nil {
 			common.ServeUnauthorizedErrorResponse(w, r, err)
 			return
@@ -155,7 +156,7 @@ func (h *Handler) HandleMarkNotificationRead(w http.ResponseWriter, r *http.Requ
 
 	userID := strings.TrimSpace(r.URL.Query().Get("user_id"))
 	if userID == "" {
-		resolved, err := h.resolveSocketUserID(r)
+		resolved, err := h.resolveAuthenticatedUserID(r)
 		if err != nil {
 			common.ServeUnauthorizedErrorResponse(w, r, err)
 			return
@@ -179,7 +180,7 @@ func (h *Handler) HandleMarkNotificationRead(w http.ResponseWriter, r *http.Requ
 }
 
 func (h *Handler) pushNotification(item entity.Notification) {
-	if h.socketManager == nil {
+	if h.Hub == nil {
 		return
 	}
 
@@ -188,8 +189,8 @@ func (h *Handler) pushNotification(item entity.Notification) {
 		dataPayload = json.RawMessage("{}")
 	}
 
-	payload := notificationOutboundMessage{
-		Type: "notification",
+	payload := realtime.OutboundMessage{
+		Type: realtime.TypeNotification,
 		Notification: map[string]any{
 			"id":        item.ID,
 			"userId":    item.UserID,
@@ -207,7 +208,7 @@ func (h *Handler) pushNotification(item entity.Notification) {
 		payload.Notification.(map[string]any)["readAt"] = item.ReadAt.UTC().Format("2006-01-02T15:04:05Z07:00")
 	}
 
-	h.socketManager.sendJSONToUser(item.UserID, payload)
+	h.Hub.SendJSONToUser(item.UserID, payload)
 }
 
 func mapNotificationResponse(item entity.Notification) entity.NotificationResponse {

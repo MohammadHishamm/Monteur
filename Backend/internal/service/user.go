@@ -415,3 +415,7 @@ func (us *UserService) CountActiveUsersWithGrowth(ctx context.Context) (*entity.
 
 	return &entity.ResourceCountWithGrowth{Count: count, PrevCount: count, Growth: 0}, nil
 }
+
+func (us *UserService) CreatePassword(ctx context.Context, id *uuid.UUID, hashedPassword string) error {
+	return us.store.CreatePassword(ctx, id, hashedPassword)
+}

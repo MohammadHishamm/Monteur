@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"time"
@@ -365,10 +366,18 @@ func (h *Handler) HandleEmailSignup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if user already exists
-	existingUser, err := h.service.User.FindByEmail(ctx, req.Email)
+	authRes, err := h.service.Auth.RegisterWithEmail(ctx, req, common.GetIPAddr(r), common.GetUserAgent(r))
 	if err != nil {
-		common.Logger.Error("failed to check existing user",
+		if errors.Is(err, apperror.ErrUserEmailAlreadyExists) {
+			common.Logger.Warn("user already exists",
+				slog.String("email", req.Email),
+				slog.String("component", "handler.auth"),
+				slog.String("method", "HandleEmailSignup"))
+			common.ServeConflictResponse(w, r.WithContext(ctx), err)
+			return
+		}
+
+		common.Logger.Error("failed to register user",
 			slog.Any("error", err),
 			slog.String("email", req.Email),
 			slog.String("component", "handler.auth"),
@@ -377,116 +386,29 @@ func (h *Handler) HandleEmailSignup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if existingUser != nil {
-		common.Logger.Warn("user already exists",
-			slog.String("email", req.Email),
-			slog.String("component", "handler.auth"),
-			slog.String("method", "HandleEmailSignup"))
-		common.ServeConflictResponse(w, r.WithContext(ctx), apperror.ErrUserEmailAlreadyExists)
-		return
-	}
-
-	// Hash password
-	hashedPassword, err := common.HashPassword(req.Password)
-	if err != nil {
-		common.Logger.Error("failed to hash password",
-			slog.Any("error", err),
-			slog.String("email", req.Email),
-			slog.String("component", "handler.auth"),
-			slog.String("method", "HandleEmailSignup"))
-		common.ServeInternalServerResponse(w, r.WithContext(ctx), err)
-		return
-	}
-
-	// Create user request (same pattern as OAuth)
-	userReq := entity.UserCreateRequest{
-		UserName:  req.UserName,
-		Email:     req.Email,
-		FirstName: req.FirstName,
-		LastName:  req.LastName,
-		AvatarURL: req.AvatarURL,
-		UserType:  req.UserType,
-	}
-
-	// Create or update user (same as OAuth flow)
-	u, err := h.service.User.CreateOrUpdateUser(ctx, &userReq)
-	if err != nil {
-		common.ServeInternalServerResponse(w, r.WithContext(ctx), err)
-		return
-	}
-
-	// Store hashed password in users table
-	if err := h.store.User.CreatePassword(ctx, &u.ID, hashedPassword); err != nil {
-		common.Logger.Error("failed to store password",
-			slog.Any("error", err),
-			slog.String("email", req.Email),
-			slog.String("userID", u.ID.String()),
-			slog.String("component", "handler.auth"),
-			slog.String("method", "HandleEmailSignup"))
-		common.ServeInternalServerResponse(w, r.WithContext(ctx), err)
-		return
-	}
-
-	// Generate JWT token first
-	roles := make([]string, len(u.Roles))
-	for i, role := range u.Roles {
-		roles[i] = role.String()
-	}
-
-	accessToken, err := common.GenerateAccessToken(u.ID.String(), "email", roles)
-	if err != nil {
-		common.Logger.Error("failed to generate JWT token",
-			slog.Any("error", err),
-			slog.String("userID", u.ID.String()),
-			slog.String("component", "handler.auth"),
-			slog.String("method", "HandleEmailSignup"))
-		common.ServeInternalServerResponse(w, r.WithContext(ctx), err)
-		return
-	}
-
-	common.Logger.Info("created user, sending activation email",
-		slog.Any("user", u.ID),
-		slog.String("provider", "email"),
-		slog.String("component", "handler.auth"),
-		slog.String("method", "HandleEmailSignup"))
-
-	// Immediately activate the account (skips email verification in dev).
-	if _, err := h.service.User.UpdateUserStatus(ctx, u.ID, true); err != nil {
-		common.ServeInternalServerResponse(w, r.WithContext(ctx), err)
-		return
-	}
-
-	// Generate refresh token
-	refreshToken, err := h.service.Auth.CreateRefreshToken(ctx, u.ID, common.GetIPAddr(r), common.GetUserAgent(r))
-	if err != nil {
-		common.ServeInternalServerResponse(w, r.WithContext(ctx), err)
-		return
-	}
-
-	// Create session
 	provider := h.service.Auth.ValidateProvider("email")
-	if _, err = h.service.Auth.CreateSessionUser(w, r, u, provider, accessToken, refreshToken); err != nil {
+	if _, err = h.service.Auth.CreateSessionUser(w, r, authRes.User, provider, authRes.AccessToken, authRes.RefreshToken); err != nil {
 		common.ServeInternalServerResponse(w, r.WithContext(ctx), err)
 		return
 	}
 
 	common.Logger.Info("user registered and signed in",
-		slog.String("userID", u.ID.String()),
+		slog.String("userID", authRes.User.ID.String()),
 		slog.String("email", req.Email),
 		slog.String("component", "handler.auth"),
 		slog.String("method", "HandleEmailSignup"))
 
 	common.WriteJson(w, http.StatusOK, common.DataEnvelope{Data: map[string]interface{}{
 		"user": map[string]interface{}{
-			"id":        u.ID,
-			"email":     u.Email,
-			"full_name": u.FullName,
+			"id":        authRes.User.ID,
+			"email":     authRes.User.Email,
+			"full_name": authRes.User.FullName,
 			"user_type": req.UserType,
-			"roles":     roles,
+			"roles":     authRes.Roles,
 		},
-		"access_token": accessToken,
-		"token_type":   "Bearer",
-		"expires_in":   15 * 60,
+		"access_token": authRes.AccessToken,
+		"token_type":   authRes.TokenType,
+		"expires_in":   authRes.ExpiresIn,
 		"is_activated": true,
 	}})
 }
@@ -498,9 +420,33 @@ func (h *Handler) HandleEmailSignup(w http.ResponseWriter, r *http.Request) {
 // the browser; only the gorilla/redistore session-ID cookie (HttpOnly) is set.
 
 func clearAuthCookies(w http.ResponseWriter) {
-	// Nothing to clear — there are no extra cookies beyond the session ID.
-	// The session itself is cleared by RemoveSessionUser (gorilla/redistore).
-	_ = w
+	cookieNames := []string{
+		config.Configs.SessionCookieName,
+		"access_token",
+		"auth_token",
+		"auth-token",
+		"refresh_token",
+		"user_id",
+		"uid",
+	}
+
+	isSecure := false
+	if config.Configs != nil && config.Configs.ApiURL != nil && config.Configs.ApiURL.Schema == "https" {
+		isSecure = true
+	}
+
+	for _, name := range cookieNames {
+		http.SetCookie(w, &http.Cookie{
+			Name:     name,
+			Value:    "",
+			Path:     "/",
+			MaxAge:   -1,
+			Expires:  time.Unix(0, 0),
+			HttpOnly: true,
+			Secure:   isSecure,
+			SameSite: http.SameSiteLaxMode,
+		})
+	}
 }
 
 // HandleEmailSignin godoc
@@ -531,68 +477,34 @@ func (h *Handler) HandleEmailSignin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// GetUserByEmail calls SeedDisplayFields which sets Is_activated and Password.
-	u, err := h.service.User.GetUserByEmail(ctx, req.Email)
-	if err != nil || u == nil {
-		common.ServeUnauthorizedErrorResponse(w, r.WithContext(ctx), apperror.ErrUserNotAuthenticated)
-		return
-	}
-
-	if !u.Is_activated {
-		common.ServeUnauthorizedErrorResponse(w, r.WithContext(ctx),
-			apperror.ErrUserNotAuthenticated.WithDetail("يرجى تفعيل حسابك أولاً عبر الرابط المرسل لبريدك."))
-		return
-	}
-	if u.Password == nil || *u.Password == "" {
-		common.ServeUnauthorizedErrorResponse(w, r.WithContext(ctx),
-			apperror.ErrUserNotAuthenticated.WithDetail("هذا الحساب مرتبط بتسجيل دخول اجتماعي."))
-		return
-	}
-	if !common.VerifyPassword(*u.Password, req.Password) {
-		common.ServeUnauthorizedErrorResponse(w, r.WithContext(ctx),
-			apperror.ErrUserNotAuthenticated.WithDetail("كلمة المرور غير صحيحة."))
-		return
-	}
-
-	roles := make([]string, len(u.Roles))
-	for i, role := range u.Roles {
-		roles[i] = role.String()
-	}
-
-	accessToken, err := common.GenerateAccessToken(u.ID.String(), "email", roles)
+	authRes, err := h.service.Auth.AuthenticateWithEmail(ctx, req.Email, req.Password, common.GetIPAddr(r), common.GetUserAgent(r))
 	if err != nil {
-		common.ServeInternalServerResponse(w, r.WithContext(ctx), err)
-		return
-	}
-
-	refreshToken, err := h.service.Auth.CreateRefreshToken(ctx, u.ID, common.GetIPAddr(r), common.GetUserAgent(r))
-	if err != nil {
-		common.ServeInternalServerResponse(w, r.WithContext(ctx), err)
+		common.ServeUnauthorizedErrorResponse(w, r.WithContext(ctx), err)
 		return
 	}
 
 	provider := h.service.Auth.ValidateProvider("email")
-	if _, err = h.service.Auth.CreateSessionUser(w, r, u, provider, accessToken, refreshToken); err != nil {
+	if _, err = h.service.Auth.CreateSessionUser(w, r, authRes.User, provider, authRes.AccessToken, authRes.RefreshToken); err != nil {
 		common.ServeInternalServerResponse(w, r.WithContext(ctx), err)
 		return
 	}
 
 	common.Logger.Info("user signed in",
-		slog.String("userID", u.ID.String()),
+		slog.String("userID", authRes.User.ID.String()),
 		slog.String("component", "handler.auth"),
 		slog.String("method", "HandleEmailSignin"))
 
 	common.WriteJson(w, http.StatusOK, common.DataEnvelope{Data: map[string]interface{}{
 		"user": map[string]interface{}{
-			"id":        u.ID,
-			"email":     u.Email,
-			"full_name": u.FullName,
-			"user_type": u.UserType,
-			"roles":     roles,
+			"id":        authRes.User.ID,
+			"email":     authRes.User.Email,
+			"full_name": authRes.User.FullName,
+			"user_type": authRes.User.UserType,
+			"roles":     authRes.Roles,
 		},
-		"access_token": accessToken,
-		"token_type":   "Bearer",
-		"expires_in":   15 * 60,
+		"access_token": authRes.AccessToken,
+		"token_type":   authRes.TokenType,
+		"expires_in":   authRes.ExpiresIn,
 	}})
 }
 

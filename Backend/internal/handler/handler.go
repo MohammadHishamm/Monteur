@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/OmarHosny18/APP-frontend/common"
+	"github.com/OmarHosny18/APP-frontend/internal/realtime"
 	"github.com/OmarHosny18/APP-frontend/internal/service"
 	"github.com/OmarHosny18/APP-frontend/internal/store"
 
@@ -12,18 +13,20 @@ import (
 )
 
 type Handler struct {
-	store         *store.Store
-	service       *service.Service
-	mailer        *common.Mailer
-	socketManager *socketManager
+	store   *store.Store
+	service *service.Service
+	mailer  *common.Mailer
+	// Hub is the real-time WebSocket connection pool. It is initialised inside
+	// New() so callers do not need to manage its lifecycle.
+	Hub *realtime.Hub
 }
 
 func New(s *service.Service, st *store.Store, ml *common.Mailer) *Handler {
 	return &Handler{
-		service:       s,
-		store:         st,
-		mailer:        ml,
-		socketManager: newSocketManager(),
+		service: s,
+		store:   st,
+		mailer:  ml,
+		Hub:     realtime.NewHub(),
 	}
 }
 
