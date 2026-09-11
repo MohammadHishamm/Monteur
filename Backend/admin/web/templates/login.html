@@ -1,0 +1,23 @@
+{{define "title"}}Log in | {{.Site.SiteTitle}}{{end}}
+{{define "content"}}
+{{if .Data.Error}}
+<p class="errornote">{{.Data.Error}}</p>
+{{end}}
+<div id="content-main">
+  <form method="post" id="login-form">
+    <input type="hidden" name="{{.CSRFField}}" value="{{.CSRFToken}}">
+    <input type="hidden" name="next" value="{{.Data.Next}}">
+    <div class="form-row">
+      <label for="id_email" class="required">Email:</label>
+      <input type="email" name="email" id="id_email" autofocus autocapitalize="none" autocomplete="username" required value="{{.Data.Email}}">
+    </div>
+    <div class="form-row">
+      <label for="id_password" class="required">Password:</label>
+      <input type="password" name="password" id="id_password" autocomplete="current-password" required>
+    </div>
+    <div class="submit-row">
+      <input type="submit" value="Log in">
+    </div>
+  </form>
+</div>
+{{end}}

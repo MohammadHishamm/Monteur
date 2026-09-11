@@ -1,0 +1,15 @@
+# Admin portal image — builds only cmd/admin. Templates and CSS are embedded
+# in the binary, so the runtime image needs nothing but the executable.
+FROM golang:1.25-alpine AS build
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/admin ./cmd/admin
+
+FROM alpine:3.20
+RUN apk add --no-cache ca-certificates tzdata
+WORKDIR /app
+COPY --from=build /out/admin /app/bin/admin
+EXPOSE 8001
+ENTRYPOINT ["/app/bin/admin"]

@@ -1,0 +1,121 @@
+{{define "content_class"}}flex{{end}}
+{{define "content"}}
+{{$d := .Data}}
+{{if $d.CanAdd}}
+<ul class="object-tools">
+  <li><a href="{{$d.AddURL}}{{if $d.PreservedQuery}}?_changelist_filters={{$d.PreservedQuery}}{{end}}" class="addlink">Add {{$d.VerboseName}}</a></li>
+</ul>
+{{end}}
+<h1>Select {{$d.VerboseName}} to {{if $d.CanChange}}change{{else}}view{{end}}</h1>
+
+<div id="content-main">
+  <div class="module" id="changelist">
+    <div id="changelist-main">
+      {{if $d.HasSearch}}
+      <div id="toolbar">
+        <form id="changelist-search" method="get">
+          <label for="searchbar">🔍</label>
+          <input type="search" id="searchbar" name="q" value="{{$d.Search}}" placeholder="Search {{$d.SearchFieldsLabel}}">
+          <input type="submit" value="Search">
+          {{range $k, $v := $d.HiddenParams}}<input type="hidden" name="{{$k}}" value="{{$v}}">{{end}}
+          {{if $d.Search}}<span class="small quiet">{{$d.Total}} result{{if ne $d.Total 1}}s{{end}} (<a href="{{$d.ClearSearchURL}}">clear</a>)</span>{{end}}
+        </form>
+      </div>
+      {{end}}
+
+      <form id="changelist-form" method="post" action="{{$d.ActionURL}}">
+        <input type="hidden" name="{{$.CSRFField}}" value="{{$.CSRFToken}}">
+        {{if $d.CanDelete}}
+        <div class="actions">
+          <label>Action:
+            <select name="action">
+              <option value="">---------</option>
+              <option value="delete_selected">Delete selected {{$d.VerboseNamePlural}}</option>
+            </select>
+          </label>
+          <button type="submit" class="button" name="index" value="0">Go</button>
+          <span class="action-counter" id="action-counter">0 of {{len $d.Rows}} selected</span>
+        </div>
+        {{end}}
+
+        <div class="results">
+          {{if $d.Rows}}
+          <table id="result_list">
+            <thead>
+              <tr>
+                {{if $d.CanDelete}}<th scope="col" class="action-checkbox-column"><input type="checkbox" id="action-toggle" title="Select all"></th>{{end}}
+                {{range $d.Columns}}
+                <th scope="col" class="{{if .Sorted}}sorted{{end}}">
+                  <a href="{{.SortURL}}" class="sortlink">{{.Label}}{{if eq .Sorted "asc"}} ▲{{else if eq .Sorted "desc"}} ▼{{end}}</a>
+                </th>
+                {{end}}
+              </tr>
+            </thead>
+            <tbody>
+              {{range $d.Rows}}
+              <tr>
+                {{if $d.CanDelete}}<td class="action-checkbox"><input type="checkbox" name="_selected_action" value="{{.Key}}" class="action-select"></td>{{end}}
+                {{range .Cells}}
+                <td class="{{.Class}}" title="{{.Title}}">
+                  {{- if .Href}}<a href="{{.Href}}">{{.Text}}</a>
+                  {{- else if .IsBool}}<span class="{{if .Bool}}true-icon{{else}}false-icon{{end}}">{{if .Bool}}✔{{else}}✘{{end}}</span>
+                  {{- else}}{{.Text}}{{end -}}
+                </td>
+                {{end}}
+              </tr>
+              {{end}}
+            </tbody>
+          </table>
+          {{else}}
+          <p class="empty">0 {{$d.VerboseNamePlural}}</p>
+          {{end}}
+        </div>
+      </form>
+
+      <p class="paginator">
+        {{if gt $d.NumPages 1}}
+          {{if $d.PrevURL}}<a href="{{$d.PrevURL}}">&laquo;</a>{{end}}
+          {{range $d.Pages}}{{if .IsCurrent}}<span class="this-page">{{.Number}}</span>{{else if .IsGap}}<span>…</span>{{else}}<a href="{{.URL}}">{{.Number}}</a>{{end}}{{end}}
+          {{if $d.NextURL}}<a href="{{$d.NextURL}}">&raquo;</a>{{end}}
+        {{end}}
+        <span>{{$d.Total}} {{if eq $d.Total 1}}{{$d.VerboseName}}{{else}}{{$d.VerboseNamePlural}}{{end}}</span>
+      </p>
+    </div>
+
+    {{if $d.Filters}}
+    <div id="changelist-filter">
+      <h2>Filter</h2>
+      {{if $d.HasActiveFilters}}<div id="changelist-filter-clear"><a href="{{$d.ClearFiltersURL}}">&#10006; Clear all filters</a></div>{{end}}
+      {{range $d.Filters}}
+      <h3>By {{.Title}}</h3>
+      <ul>
+        {{range .Options}}<li class="{{if .Selected}}selected{{end}}"><a href="{{.URL}}">{{.Label}}</a></li>{{end}}
+      </ul>
+      {{end}}
+    </div>
+    {{end}}
+  </div>
+</div>
+
+<script>
+(function () {
+  var toggle = document.getElementById('action-toggle');
+  var boxes = document.querySelectorAll('.action-select');
+  var counter = document.getElementById('action-counter');
+  function update() {
+    var n = 0;
+    boxes.forEach(function (b) { n += b.checked ? 1 : 0; b.closest('tr').classList.toggle('selected', b.checked); });
+    if (counter) counter.textContent = n + ' of ' + boxes.length + ' selected';
+  }
+  if (toggle) toggle.addEventListener('change', function () { boxes.forEach(function (b) { b.checked = toggle.checked; }); update(); });
+  boxes.forEach(function (b) { b.addEventListener('change', update); });
+  var form = document.getElementById('changelist-form');
+  if (form) form.addEventListener('submit', function (e) {
+    var action = form.querySelector('select[name=action]');
+    if (!action || !action.value) { e.preventDefault(); alert('No action selected.'); return; }
+    var any = Array.prototype.some.call(boxes, function (b) { return b.checked; });
+    if (!any) { e.preventDefault(); alert('Items must be selected in order to perform actions on them. No items have been changed.'); }
+  });
+})();
+</script>
+{{end}}

@@ -52,7 +52,18 @@ The server listens on `http://localhost:8000` with the following endpoints:
 - `POST /v1/auth/register` - User registration
 - `POST /v1/auth/logout` - User logout
 
-### 3. Test the Backend
+### 3. Start the Admin Portal (optional)
+
+A Django-admin-style UI over the database runs as a separate binary on port 8001:
+
+```bash
+go run ./cmd/admin
+```
+
+Open `http://localhost:8001/admin/` and sign in with `admin@monteur.com` / `test1234`
+(created automatically on first start). See [`admin/README.md`](admin/README.md).
+
+### 4. Test the Backend
 
 **Quick connectivity test:**
 ```bash
@@ -183,9 +194,11 @@ docker compose -f docker/docker-compose.infra.yaml up
 
 ```
 Backend/
-├── cmd/api/              # Application entry point
+├── cmd/api/              # API entry point
 │   ├── main.go
 │   └── api.go
+├── cmd/admin/            # Admin portal entry point (port 8001)
+├── admin/                # Django-admin-style portal (see admin/README.md)
 ├── internal/
 │   ├── config/           # Configuration management
 │   ├── handler/          # HTTP handlers

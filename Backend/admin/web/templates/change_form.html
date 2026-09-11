@@ -1,0 +1,67 @@
+{{define "content"}}
+{{$d := .Data}}
+{{if not $d.IsAdd}}
+<ul class="object-tools">
+  <li><a href="{{$d.HistoryURL}}" class="viewlink">Changelist</a></li>
+</ul>
+{{end}}
+<h1>{{if $d.IsAdd}}Add {{$d.VerboseName}}{{else}}Change {{$d.VerboseName}}{{end}}</h1>
+
+<div id="content-main">
+  <form method="post" id="{{$d.Slug}}_form" novalidate>
+    <input type="hidden" name="{{$.CSRFField}}" value="{{$.CSRFToken}}">
+    {{if $d.Errors}}
+    <p class="errornote">Please correct the error{{if gt (len $d.Errors) 1}}s{{end}} below.</p>
+    {{end}}
+    {{if $d.FormError}}
+    <p class="errornote">{{$d.FormError}}</p>
+    {{end}}
+
+    <fieldset class="module aligned">
+      {{range $d.Fields}}
+      <div class="form-row field-{{.Name}}{{if .Error}} errors{{end}}">
+        <label for="id_{{.Name}}" class="{{if .Required}}required{{end}}">{{.Label}}:</label>
+        <div class="field">
+          {{if .Readonly}}
+            <div class="readonly">{{if eq .Widget "json"}}<pre>{{.Value}}</pre>{{else}}{{.Display}}{{end}}</div>
+          {{else if eq .Widget "checkbox"}}
+            <input type="checkbox" name="{{.Name}}" id="id_{{.Name}}" {{if .Checked}}checked{{end}}>
+          {{else if eq .Widget "select"}}
+            <select name="{{.Name}}" id="id_{{.Name}}">
+              {{if not .Required}}<option value="">---------</option>{{end}}
+              {{$v := .Value}}{{range .Choices}}<option value="{{.}}" {{if eq . $v}}selected{{end}}>{{.}}</option>{{end}}
+            </select>
+          {{else if eq .Widget "textarea"}}
+            <textarea name="{{.Name}}" id="id_{{.Name}}" class="vLargeTextField" rows="6">{{.Value}}</textarea>
+          {{else if eq .Widget "json"}}
+            <textarea name="{{.Name}}" id="id_{{.Name}}" class="vJSONField" rows="8" spellcheck="false">{{.Value}}</textarea>
+          {{else if eq .Widget "array"}}
+            <textarea name="{{.Name}}" id="id_{{.Name}}" class="vArrayField" rows="4" spellcheck="false">{{.Value}}</textarea>
+          {{else if eq .Widget "number"}}
+            <input type="number" step="any" name="{{.Name}}" id="id_{{.Name}}" class="{{.CSSClass}}" value="{{.Value}}">
+          {{else if eq .Widget "datetime"}}
+            <input type="datetime-local" step="1" name="{{.Name}}" id="id_{{.Name}}" value="{{.Value}}">
+          {{else if eq .Widget "date"}}
+            <input type="date" name="{{.Name}}" id="id_{{.Name}}" value="{{.Value}}">
+          {{else if eq .Widget "password"}}
+            <input type="password" name="{{.Name}}" id="id_{{.Name}}" class="vTextField" autocomplete="new-password" placeholder="{{if $d.IsAdd}}Enter a password{{else}}Leave blank to keep current password{{end}}">
+          {{else}}
+            <input type="text" name="{{.Name}}" id="id_{{.Name}}" class="{{.CSSClass}}" value="{{.Value}}" {{if .MaxLength}}maxlength="{{.MaxLength}}"{{end}}>
+            {{if .RelatedURL}}<a href="{{.RelatedURL}}" class="related-lookup" target="_blank" title="Open related {{.RelatedLabel}}">{{if .RelatedRepr}}{{.RelatedRepr}} ↗{{else}}Browse {{.RelatedLabel}} ↗{{end}}</a>{{end}}
+          {{end}}
+          {{if .Error}}<ul class="errorlist"><li>{{.Error}}</li></ul>{{end}}
+          {{if .Help}}<p class="help">{{.Help}}</p>{{end}}
+        </div>
+      </div>
+      {{end}}
+    </fieldset>
+
+    <div class="submit-row">
+      {{if and (not $d.IsAdd) $d.CanDelete}}<p class="deletelink-box"><a href="{{$d.DeleteURL}}" class="button deletelink">Delete</a></p>{{end}}
+      {{if $d.CanAdd}}<input type="submit" value="Save and add another" name="_addanother">{{end}}
+      {{if $d.CanChange}}<input type="submit" value="Save and continue editing" name="_continue">{{end}}
+      <input type="submit" value="Save" class="default" name="_save">
+    </div>
+  </form>
+</div>
+{{end}}

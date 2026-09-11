@@ -1,0 +1,28 @@
+{{define "content"}}
+{{$d := .Data}}
+<h1>Are you sure?</h1>
+<div id="content-main" class="delete-confirmation">
+  {{if eq (len $d.Objects) 1}}
+    {{range $d.Objects}}<p>Are you sure you want to delete the {{$d.VerboseName}} "<a href="{{.URL}}">{{.Repr}}</a>"? All of the following related items will be deleted:</p>{{end}}
+  {{else}}
+    <p>Are you sure you want to delete the selected {{$d.VerboseNamePlural}}? All of the following objects and their related items will be deleted:</p>
+  {{end}}
+  <h2>Summary</h2>
+  <ul><li>{{$d.VerboseNamePlural}}: {{len $d.Objects}}</li></ul>
+  <h2>Objects</h2>
+  <ul>
+    {{range $d.Objects}}<li>{{$d.VerboseName}}: <a href="{{.URL}}">{{.Repr}}</a></li>{{end}}
+  </ul>
+  <p class="help">Rows in other tables that reference these through <code>ON DELETE CASCADE</code> foreign keys will be removed by the database as well.</p>
+  <form method="post" action="{{$d.ActionURL}}">
+    <input type="hidden" name="{{$.CSRFField}}" value="{{$.CSRFToken}}">
+    {{range $d.Objects}}<input type="hidden" name="_selected_action" value="{{.Key}}">{{end}}
+    <input type="hidden" name="action" value="delete_selected">
+    <input type="hidden" name="post" value="yes">
+    <div class="submit-row">
+      <input type="submit" value="Yes, I'm sure" class="button deletelink">
+      <a href="{{$d.CancelURL}}" class="cancel-link">No, take me back</a>
+    </div>
+  </form>
+</div>
+{{end}}
