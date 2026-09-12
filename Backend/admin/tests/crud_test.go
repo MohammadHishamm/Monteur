@@ -81,6 +81,32 @@ func testCRUD(t *testing.T, h *harness, fx *fixtures) {
 		}
 	})
 
+	h.run(t, "a text[] with a NULL element still renders", func(t *testing.T) {
+		m := h.model("jobs")
+		key := fx.first("jobs")
+		h.exec(`UPDATE jobs SET skills = ARRAY['admintest-a', NULL, 'admintest-b'] WHERE id::text = $1`, key)
+		// The NULL element renders as an empty line between the two values.
+		want := "admintest-a" + "\n" + "\n" + "admintest-b"
+		if resp := h.get(m.ObjectURL(key)); resp.Code != http.StatusOK || !resp.contains(want) {
+			t.Fatalf("change form with NULL array element: %d", resp.Code)
+		}
+		if resp := h.get(m.URL()); resp.Code != http.StatusOK {
+			t.Fatalf("changelist with NULL array element: %d", resp.Code)
+		}
+	})
+
+	h.run(t, "deleting a row that vanished meanwhile is a 404, not a false success", func(t *testing.T) {
+		m := h.model("notifications")
+		key := addRow(t, h, fx, m, map[string]string{"title": marker + "vanish"})
+		if h.get(m.DeleteURL(key)).Code != http.StatusOK {
+			t.Fatal("confirmation page")
+		}
+		h.exec(`DELETE FROM notifications WHERE id::text = $1`, key) // someone else deletes it first
+		if resp := h.post(m.DeleteURL(key), nil); resp.Code != http.StatusNotFound {
+			t.Fatalf("got %d, want 404", resp.Code)
+		}
+	})
+
 	h.run(t, "bulk action with nothing selected is a no-op", func(t *testing.T) {
 		m := h.model("notifications")
 		before := h.count("notifications", "")
@@ -95,6 +121,10 @@ func testCRUD(t *testing.T, h *harness, fx *fixtures) {
 		list := h.get(m.URL())
 		if list.Code != http.StatusOK || list.contains(`class="addlink"`) || list.contains("delete_selected") {
 			t.Fatalf("read-only changelist should hide add/delete: %d", list.Code)
+		}
+		entry := h.queryString(`SELECT id::text FROM admin_log ORDER BY id DESC LIMIT 1`)
+		if page := h.get(m.ObjectURL(entry)); page.Code != http.StatusOK || page.contains(`name="_save"`) {
+			t.Errorf("view-only change form must not render a Save button (%d)", page.Code)
 		}
 		if h.get(m.AddURL()).Code != http.StatusForbidden {
 			t.Error("add form should be forbidden")

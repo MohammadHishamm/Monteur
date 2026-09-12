@@ -6,11 +6,13 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -18,6 +20,7 @@ import (
 	"github.com/OmarHosny18/APP-frontend/common"
 	"github.com/OmarHosny18/APP-frontend/internal/config"
 	"github.com/joho/godotenv"
+	"github.com/lib/pq"
 )
 
 func main() {
@@ -48,7 +51,7 @@ func main() {
 	}
 	defer db.Close()
 
-	handler, err := admin.New(ctx, cfg, db)
+	handler, err := buildWithRetry(ctx, cfg, db)
 	if err != nil {
 		common.Logger.Error("failed to initialize admin portal",
 			slog.Any("error", err),
@@ -60,6 +63,40 @@ func main() {
 	if err := run(ctx, cfg.Addr, cfg.BasePath, handler); err != nil {
 		panic(err)
 	}
+}
+
+// schemaWait bounds how long the portal waits for the API container's
+// `goose up` to create the tables it manages. Compose only guarantees the
+// backend *started*, not that its migrations finished.
+const schemaWait = 90 * time.Second
+
+// buildWithRetry retries admin.New while the failure is a missing table,
+// which is what an in-progress migration looks like from here. Any other
+// error (bad config, unreachable database) fails immediately.
+func buildWithRetry(ctx context.Context, cfg admin.Config, db *sql.DB) (http.Handler, error) {
+	deadline := time.Now().Add(schemaWait)
+	for {
+		handler, err := admin.New(ctx, cfg, db)
+		if err == nil {
+			return handler, nil
+		}
+		if !isMissingTable(err) || time.Now().After(deadline) {
+			return nil, err
+		}
+		common.Logger.Warn("database schema not ready; waiting for migrations",
+			slog.Any("error", err),
+			slog.String("component", "admin.main"),
+			slog.String("method", "buildWithRetry"))
+		time.Sleep(3 * time.Second)
+	}
+}
+
+func isMissingTable(err error) bool {
+	var pqErr *pq.Error
+	if errors.As(err, &pqErr) && pqErr.Code == "42P01" { // undefined_table
+		return true
+	}
+	return strings.Contains(err.Error(), "not found in schema")
 }
 
 func run(ctx context.Context, addr, basePath string, h http.Handler) error {
@@ -75,6 +112,7 @@ func run(ctx context.Context, addr, basePath string, h http.Handler) error {
 	shutdown := make(chan error, 1)
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	defer signal.Stop(quit)
 
 	go func() {
 		sig := <-quit

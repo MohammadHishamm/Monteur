@@ -70,11 +70,16 @@ func (r *Repository) TouchLogin(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
-// Create inserts an active admin with an already-hashed password.
+// Create inserts an active admin with an already-hashed password. It is a
+// no-op (returning nil) when the email already exists, so concurrent
+// bootstraps from several replicas cannot race each other into a unique
+// violation.
 func (r *Repository) Create(ctx context.Context, email, fullName, passwordHash string) (*Admin, error) {
 	return r.scan(r.db.QueryRowContext(ctx,
 		`INSERT INTO admins (email, password_hash, full_name, is_active)
-		 VALUES ($1, $2, $3, true) RETURNING `+adminColumns,
+		 VALUES ($1, $2, $3, true)
+		 ON CONFLICT (email) DO NOTHING
+		 RETURNING `+adminColumns,
 		email, passwordHash, fullName))
 }
 

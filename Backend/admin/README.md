@@ -15,8 +15,10 @@ it does not exist):
 |---------------------|------------|
 | `admin@monteur.com` | `test1234` |
 
-Change these via `ADMIN_BOOTSTRAP_*` in `docker/.env` before going live. The
-account lives in the `admins` table — the same table the JSON admin API
+These defaults apply in development only. In production (`ENV=production`)
+the portal creates the account **only if `ADMIN_BOOTSTRAP_PASSWORD` is set**,
+refuses to start if it is still `test1234`, and refuses an empty session key.
+The account lives in the `admins` table — the same table the JSON admin API
 (`/v1/admin/*`) authenticates against — and can be edited from the portal
 itself under **Admins**.
 
@@ -110,7 +112,7 @@ Set `DisableAdd`, `DisableChange` or `DisableDelete` for read-only tables.
 | `ADMIN_SESSION_MAX_AGE`    | `28800` (8 h)             | Session lifetime in seconds             |
 | `ADMIN_SECURE_COOKIES`     | `true` in production      | `Secure` flag on the session cookie     |
 | `ADMIN_BOOTSTRAP_EMAIL`    | `admin@monteur.com`       | First-run superuser                     |
-| `ADMIN_BOOTSTRAP_PASSWORD` | `test1234`                |                                         |
+| `ADMIN_BOOTSTRAP_PASSWORD` | `test1234` (dev only)     | Required in production; `test1234` refused |
 | `ADMIN_BOOTSTRAP_NAME`     | `Monteur Admin`           |                                         |
 
 Database settings (`DB_ADDR`, …) are shared with the API.
@@ -118,8 +120,10 @@ Database settings (`DB_ADDR`, …) are shared with the API.
 ## Production
 
 `docker/docker-compose.yaml` includes an `admin` service (built from
-`docker/Dockerfile.admin`) listening on 8001. Route it from the API host so
-the public URL is `https://api-v1.<domain>/admin/…`:
+`docker/Dockerfile.admin`) bound to `127.0.0.1:8001` — reachable only through
+the reverse proxy on the host, never directly. At startup it waits up to 90 s
+for the API container's `goose up` to create the tables it manages. Route it
+from the API host so the public URL is `https://api-v1.<domain>/admin/…`:
 
 ```nginx
 location /admin/ {
@@ -162,5 +166,7 @@ reachable) and drives it over HTTP like a browser, in ordered phases:
 | Isolation        | row count + `md5` checksum of every table equal before and after — the suite touched nothing else |
 
 Every row the suite writes carries the `admintest-` marker; a catch-all purge
-runs before and after, so an aborted run never leaves debris. Registering a
+runs before and after, so an aborted run never leaves debris. As a safety net
+the suite only runs when `DB_ADDR` points at localhost (override with
+`ADMIN_TESTS_ALLOW_REMOTE_DB=1`). Registering a
 new table without adding it to `creationOrder` fails the suite on purpose.

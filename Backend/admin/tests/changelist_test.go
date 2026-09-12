@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"testing"
 )
 
@@ -73,6 +74,15 @@ func testChangelists(t *testing.T, h *harness, fx *fixtures) {
 		}
 		if h.get(users.ObjectURL("not-even-a-uuid")).Code != http.StatusNotFound {
 			t.Error("malformed key must be 404, not 500")
+		}
+	})
+
+	h.run(t, "an unrecognised boolean filter value is ignored, not treated as false", func(t *testing.T) {
+		users := h.model("users")
+		all := h.count("users", "")
+		resp := h.get(users.URL() + "?is_active=garbage")
+		if resp.Code != http.StatusOK || !resp.contains(strconv.Itoa(all)+" user") {
+			t.Fatalf("garbage filter should list all %d users (got %d)", all, resp.Code)
 		}
 	})
 

@@ -56,12 +56,18 @@
       {{end}}
     </fieldset>
 
+    {{if or $d.IsAdd $d.CanChange}}
     <div class="submit-row">
       {{if and (not $d.IsAdd) $d.CanDelete}}<p class="deletelink-box"><a href="{{$d.DeleteURL}}" class="button deletelink">Delete</a></p>{{end}}
       {{if $d.CanAdd}}<input type="submit" value="Save and add another" name="_addanother">{{end}}
       {{if $d.CanChange}}<input type="submit" value="Save and continue editing" name="_continue">{{end}}
       <input type="submit" value="Save" class="default" name="_save">
     </div>
+    {{else if $d.CanDelete}}
+    <div class="submit-row">
+      <p class="deletelink-box"><a href="{{$d.DeleteURL}}" class="button deletelink">Delete</a></p>
+    </div>
+    {{end}}
   </form>
 </div>
 {{end}}

@@ -17,13 +17,16 @@ import (
 type Row map[string]any
 
 // scanRow reads the current rows cursor into a Row using kind-aware
-// destinations; text arrays need pq.StringArray, everything else scans into
-// an interface and is normalised afterwards.
+// destinations. Text arrays are scanned element-wise into NullStrings so a
+// NULL element does not fail the whole read (pq.StringArray would);
+// everything else scans into an interface and is normalised afterwards.
 func scanRow(rows *sql.Rows, cols []schema.Column) (Row, error) {
 	dests := make([]any, len(cols))
+	arrays := make([]*[]sql.NullString, len(cols))
 	for i, c := range cols {
 		if c.Kind == schema.KindTextArray {
-			dests[i] = new(pq.StringArray)
+			arrays[i] = new([]sql.NullString)
+			dests[i] = pq.Array(arrays[i])
 		} else {
 			dests[i] = new(any)
 		}
@@ -34,16 +37,19 @@ func scanRow(rows *sql.Rows, cols []schema.Column) (Row, error) {
 
 	row := make(Row, len(cols))
 	for i, c := range cols {
-		switch d := dests[i].(type) {
-		case *pq.StringArray:
-			if *d == nil {
+		if arr := arrays[i]; arr != nil {
+			if *arr == nil {
 				row[c.Name] = nil
-			} else {
-				row[c.Name] = []string(*d)
+				continue
 			}
-		case *any:
-			row[c.Name] = normalise(*d)
+			out := make([]string, len(*arr))
+			for j, e := range *arr {
+				out[j] = e.String // a NULL element renders as ""
+			}
+			row[c.Name] = out
+			continue
 		}
+		row[c.Name] = normalise(*dests[i].(*any))
 	}
 	return row, nil
 }

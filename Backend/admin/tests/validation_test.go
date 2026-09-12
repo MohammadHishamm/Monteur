@@ -184,6 +184,22 @@ func testValidation(t *testing.T, h *harness, fx *fixtures) {
 		}
 	})
 
+	h.run(t, "a long multibyte label is truncated by character in the audit log", func(t *testing.T) {
+		// messages.body is unbounded TEXT and the model's repr column.
+		messages := h.model("messages")
+		key := fx.first("messages")
+		body := strings.Repeat("مونتاج", 60) // 360 characters, 720 bytes
+		f := scrapeForm(h.get(messages.ObjectURL(key)).Body)
+		f.Set("body", body)
+		if resp := h.post(messages.ObjectURL(key), f); resp.Code != http.StatusFound {
+			t.Fatalf("got %d: %s", resp.Code, formErrors(resp.Body))
+		}
+		repr := h.queryString(`SELECT object_repr FROM admin_log WHERE model = 'messages' ORDER BY id DESC LIMIT 1`)
+		if n := len([]rune(repr)); n != 255 || !strings.HasPrefix(body, repr) {
+			t.Fatalf("object_repr has %d characters and prefix match=%v", n, strings.HasPrefix(body, repr))
+		}
+	})
+
 	h.run(t, "password is never rendered", func(t *testing.T) {
 		page := h.get(users.ObjectURL(fx.client))
 		hash := h.queryString(`SELECT password_hash FROM users WHERE id::text = $1`, fx.client)

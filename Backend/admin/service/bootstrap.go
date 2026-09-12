@@ -32,8 +32,12 @@ func EnsureSuperuser(ctx context.Context, repo *auth.Repository, email, password
 	if err != nil {
 		return fmt.Errorf("service: bootstrap hash: %w", err)
 	}
-	if _, err := repo.Create(ctx, email, fullName, hash); err != nil {
+	created, err := repo.Create(ctx, email, fullName, hash)
+	if err != nil {
 		return fmt.Errorf("service: bootstrap create: %w", err)
+	}
+	if created == nil {
+		return nil // another replica won the race; nothing to do
 	}
 
 	common.Logger.Info("created initial admin account",

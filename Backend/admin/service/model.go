@@ -162,7 +162,14 @@ func filtersFor(c schema.Column, raw string) []repository.Filter {
 
 	switch c.Kind {
 	case schema.KindBool:
-		return []repository.Filter{{Column: c.Name, Op: repository.OpEq, Value: raw == "1" || raw == "true"}}
+		switch raw {
+		case "1", "true":
+			return []repository.Filter{{Column: c.Name, Op: repository.OpEq, Value: true}}
+		case "0", "false":
+			return []repository.Filter{{Column: c.Name, Op: repository.OpEq, Value: false}}
+		default:
+			return nil // an unrecognised value is ignored, never guessed
+		}
 
 	case schema.KindTimestamp, schema.KindDate:
 		now := time.Now().UTC()
@@ -347,37 +354,50 @@ func (s *ModelService) Update(ctx context.Context, m *site.Model, admin *auth.Ad
 		return nil, err
 	}
 
-	// Only write what actually changed: the audit message stays meaningful
-	// and an untouched form never clobbers a concurrent update.
-	current, err := s.repo.Get(ctx, m.Table, key)
+	// Diff against the stored row and write only the columns that differ, so
+	// the audit message stays meaningful and columns the admin did not touch
+	// are never rewritten. The read locks the row (SELECT … FOR UPDATE) in
+	// the same transaction as the write, so the comparison and the update
+	// see one consistent version. Two admins editing the same column still
+	// resolve last-write-wins, exactly as in Django's admin.
+	var (
+		row     repository.Row
+		changed []string
+	)
+	err = s.repo.InTx(ctx, func(tx *repository.Repository) error {
+		current, err := tx.GetForUpdate(ctx, m.Table, key)
+		if err != nil {
+			return err
+		}
+		for _, c := range m.Table.Columns {
+			v, ok := data[c.Name]
+			if !ok {
+				continue
+			}
+			if m.IsPassword(c.Name) || !valuesEqual(c, current[c.Name], v) {
+				changed = append(changed, c.Name)
+			} else {
+				delete(data, c.Name)
+			}
+		}
+		if len(changed) == 0 {
+			row = current
+			return nil
+		}
+		// Keep the bookkeeping column honest even though it is readonly on the form.
+		if _, edited := data["updated_at"]; !edited && m.Table.HasColumn("updated_at") {
+			data["updated_at"] = time.Now().UTC()
+		}
+		row, err = tx.Update(ctx, m.Table, key, data)
+		return err
+	})
 	if err != nil {
 		return nil, err
 	}
-	changed := make([]string, 0, len(data))
-	for _, c := range m.Table.Columns {
-		v, ok := data[c.Name]
-		if !ok {
-			continue
-		}
-		if m.IsPassword(c.Name) || !valuesEqual(c, current[c.Name], v) {
-			changed = append(changed, c.Name)
-		} else {
-			delete(data, c.Name)
-		}
-	}
+
 	if len(changed) == 0 {
-		s.record(ctx, admin, ActionChange, m, current, "No fields changed.")
-		return current, nil
-	}
-
-	// Keep the bookkeeping column honest even though it is readonly on the form.
-	if _, edited := data["updated_at"]; !edited && m.Table.HasColumn("updated_at") {
-		data["updated_at"] = time.Now().UTC()
-	}
-
-	row, err := s.repo.Update(ctx, m.Table, key, data)
-	if err != nil {
-		return nil, err
+		s.record(ctx, admin, ActionChange, m, row, "No fields changed.")
+		return row, nil
 	}
 	s.record(ctx, admin, ActionChange, m, row, "Changed "+strings.Join(changed, ", ")+".")
 	return row, nil

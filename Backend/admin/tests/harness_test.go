@@ -78,6 +78,12 @@ func newHarness(t *testing.T) *harness {
 	if addr == "" {
 		t.Skip("DB_ADDR not set; integration suite needs PostgreSQL")
 	}
+	// The suite writes to and deletes from the database it is pointed at.
+	// Every row it touches carries the marker, but a wrong DB_ADDR must not
+	// be able to reach a shared or production server by accident.
+	if !isLocalDatabase(addr) && os.Getenv("ADMIN_TESTS_ALLOW_REMOTE_DB") != "1" {
+		t.Skipf("DB_ADDR does not point at localhost; set ADMIN_TESTS_ALLOW_REMOTE_DB=1 to run against it anyway")
+	}
 	db, err := config.NewDatabase(ctx, addr, "5m", "30m", 20, 5)
 	if err != nil {
 		t.Skipf("database unreachable (%v); integration suite needs PostgreSQL", err)
@@ -337,7 +343,23 @@ func (h *harness) snapshot() snapshot {
 		}
 		out[name] = st
 	}
+	if err := rows.Err(); err != nil {
+		h.t.Fatalf("snapshot: %v", err)
+	}
 	return out
+}
+
+// isLocalDatabase reports whether a postgres:// URL points at this machine.
+func isLocalDatabase(addr string) bool {
+	u, err := url.Parse(addr)
+	if err != nil {
+		return false
+	}
+	switch u.Hostname() {
+	case "localhost", "127.0.0.1", "::1":
+		return true
+	}
+	return false
 }
 
 func randomHex(n int) string {

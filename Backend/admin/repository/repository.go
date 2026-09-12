@@ -54,11 +54,36 @@ type ListQuery struct {
 
 // Repository executes SQL against one database.
 type Repository struct {
-	db *sql.DB
+	db   querier // *sql.DB, or *sql.Tx inside InTx
+	root *sql.DB // always the pool, used to begin transactions
+}
+
+// querier is what *sql.DB and *sql.Tx have in common.
+type querier interface {
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
 }
 
 // New wraps a database handle.
-func New(db *sql.DB) *Repository { return &Repository{db: db} }
+func New(db *sql.DB) *Repository { return &Repository{db: db, root: db} }
+
+// InTx runs fn with a Repository bound to one transaction, committing when
+// fn returns nil and rolling back otherwise.
+func (r *Repository) InTx(ctx context.Context, fn func(tx *Repository) error) error {
+	tx, err := r.root.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("repository: begin: %w", err)
+	}
+	if err := fn(&Repository{db: tx, root: r.root}); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("repository: commit: %w", err)
+	}
+	return nil
+}
 
 // List returns one page of rows.
 func (r *Repository) List(ctx context.Context, t *schema.Table, q ListQuery) ([]Row, error) {
@@ -98,8 +123,17 @@ func (r *Repository) Count(ctx context.Context, t *schema.Table, q ListQuery) (i
 
 // Get returns a single row by key.
 func (r *Repository) Get(ctx context.Context, t *schema.Table, key Key) (Row, error) {
+	return r.get(ctx, t, key, "")
+}
+
+// GetForUpdate is Get with a row lock held until the enclosing InTx ends.
+func (r *Repository) GetForUpdate(ctx context.Context, t *schema.Table, key Key) (Row, error) {
+	return r.get(ctx, t, key, " FOR UPDATE")
+}
+
+func (r *Repository) get(ctx context.Context, t *schema.Table, key Key, suffix string) (Row, error) {
 	where, args := keyPredicate(t, key, 0)
-	rows, err := r.db.QueryContext(ctx, "SELECT "+selectList(t)+" FROM "+ident(t.Name)+" WHERE "+where, args...)
+	rows, err := r.db.QueryContext(ctx, "SELECT "+selectList(t)+" FROM "+ident(t.Name)+" WHERE "+where+suffix, args...)
 	if err != nil {
 		return nil, fmt.Errorf("repository: get %s: %w", t.Name, err)
 	}

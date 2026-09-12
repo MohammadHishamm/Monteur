@@ -41,6 +41,9 @@ func New(ctx context.Context, cfg Config, db *sql.DB) (http.Handler, error) {
 
 // Build is New but also returns the registry.
 func Build(ctx context.Context, cfg Config, db *sql.DB) (*Portal, error) {
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
 	s := site.New(cfg.BasePath)
 	s.SiteHeader = cfg.SiteHeader
 	s.SiteTitle = cfg.SiteTitle
@@ -55,7 +58,11 @@ func Build(ctx context.Context, cfg Config, db *sql.DB) (*Portal, error) {
 		slog.String("method", "New"))
 
 	admins := auth.NewRepository(db)
-	if err := service.EnsureSuperuser(ctx, admins, cfg.BootstrapEmail, cfg.BootstrapPassword, cfg.BootstrapName); err != nil {
+	if cfg.BootstrapPassword == "" {
+		common.Logger.Warn("ADMIN_BOOTSTRAP_PASSWORD not set; no admin account will be created automatically",
+			slog.String("component", "admin.app"),
+			slog.String("method", "Build"))
+	} else if err := service.EnsureSuperuser(ctx, admins, cfg.BootstrapEmail, cfg.BootstrapPassword, cfg.BootstrapName); err != nil {
 		return nil, err
 	}
 

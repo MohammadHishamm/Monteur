@@ -4,12 +4,24 @@
 package admin
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/OmarHosny18/APP-frontend/common"
 )
+
+// devBootstrapPassword is the out-of-the-box password for local development.
+// It is never applied in production: there the bootstrap account is only
+// created when ADMIN_BOOTSTRAP_PASSWORD is set explicitly, and this value
+// is refused outright.
+const devBootstrapPassword = "test1234"
 
 // Config is everything the portal needs beyond the shared database settings.
 // All of it comes from the environment (docker/.env) with sensible defaults.
 type Config struct {
+	// Production tightens defaults: secure cookies, no default bootstrap
+	// password.
+	Production bool
 	// Addr is the listen address; the portal runs on its own port so it can
 	// be deployed and firewalled independently of the public API.
 	Addr string
@@ -35,7 +47,12 @@ type Config struct {
 // LoadConfig reads the environment. It must be called after godotenv has
 // loaded docker/.env.
 func LoadConfig(isProd bool, sessionKeyFallback string) Config {
+	defaultPassword := devBootstrapPassword
+	if isProd {
+		defaultPassword = ""
+	}
 	return Config{
+		Production:        isProd,
 		Addr:              common.GetEnvString("ADMIN_ADDR", ":8001"),
 		BasePath:          common.GetEnvString("ADMIN_BASE_PATH", "/admin"),
 		SiteHeader:        common.GetEnvString("ADMIN_SITE_HEADER", "Monteur administration"),
@@ -45,7 +62,22 @@ func LoadConfig(isProd bool, sessionKeyFallback string) Config {
 		SessionMaxAge:     common.GetEnvInt("ADMIN_SESSION_MAX_AGE", 8*60*60),
 		SecureCookies:     common.GetEnvBool("ADMIN_SECURE_COOKIES", isProd),
 		BootstrapEmail:    common.GetEnvString("ADMIN_BOOTSTRAP_EMAIL", "admin@monteur.com"),
-		BootstrapPassword: common.GetEnvString("ADMIN_BOOTSTRAP_PASSWORD", "test1234"),
+		BootstrapPassword: common.GetEnvString("ADMIN_BOOTSTRAP_PASSWORD", defaultPassword),
 		BootstrapName:     common.GetEnvString("ADMIN_BOOTSTRAP_NAME", "Monteur Admin"),
 	}
+}
+
+// Validate rejects configurations that would leave the portal insecure.
+// It is called by Build so a bad deployment fails at startup, loudly.
+func (c Config) Validate() error {
+	if c.SessionKey == "" {
+		return errors.New("admin: ADMIN_SESSION_KEY (or SESSION_KEY) must not be empty — session cookies would be unsigned")
+	}
+	if c.BasePath == "" || c.BasePath[0] != '/' {
+		return fmt.Errorf("admin: ADMIN_BASE_PATH %q must start with '/'", c.BasePath)
+	}
+	if c.Production && c.BootstrapPassword == devBootstrapPassword {
+		return errors.New("admin: ADMIN_BOOTSTRAP_PASSWORD is the development default; set a real password in production")
+	}
+	return nil
 }

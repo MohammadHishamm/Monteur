@@ -63,8 +63,10 @@ func NewLogService(db *sql.DB) *LogService { return &LogService{db: db} }
 // swallowed so the caller can decide; the model service treats them as
 // non-fatal and logs them.
 func (l *LogService) Record(ctx context.Context, admin *auth.Admin, action Action, appLabel, model, objectID, repr, message string) error {
-	if len(repr) > 255 {
-		repr = repr[:255]
+	// object_repr is VARCHAR(255) — characters, not bytes — so truncate by
+	// rune to keep multibyte labels (Arabic titles, emoji) valid UTF-8.
+	if r := []rune(repr); len(r) > 255 {
+		repr = string(r[:255])
 	}
 	_, err := l.db.ExecContext(ctx, `
 		INSERT INTO admin_log (admin_id, admin_email, action_flag, app_label, model, object_id, object_repr, change_message)

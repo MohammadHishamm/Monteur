@@ -171,8 +171,13 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 	repr := h.models.Repr(m, rows[0])
 
-	if _, err := h.models.Delete(r.Context(), m, auth.CurrentAdmin(r.Context()), []repository.Key{key}); err != nil {
+	n, err := h.models.Delete(r.Context(), m, auth.CurrentAdmin(r.Context()), []repository.Key{key})
+	if err != nil {
 		h.serverError(w, r, err)
+		return
+	}
+	if n == 0 {
+		h.notFound(w) // deleted by someone else between the confirmation page and this POST
 		return
 	}
 	h.sessions.AddFlash(w, r, "success", fmt.Sprintf("The %s “%s” was deleted successfully.", m.Admin.VerboseName, repr))
