@@ -16,7 +16,15 @@ export interface ClientJob {
   color: string
 }
 
-export type ProposalStatus = "new" | "shortlisted" | "hired" | "declined"
+// Mirrors the proposals.status CHECK constraint in the database. The client UI
+// used to expect "new"/"hired", which the backend never writes.
+export type ProposalStatus =
+  | "pending"
+  | "viewed"
+  | "shortlisted"
+  | "accepted"
+  | "declined"
+  | "withdrawn"
 
 /** Nested freelancer shape computed from flat proposal fields by the client dashboard page. */
 export interface ProposalFreelancer {

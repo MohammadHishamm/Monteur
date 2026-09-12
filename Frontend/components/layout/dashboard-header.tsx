@@ -86,7 +86,7 @@ export function DashboardHeader({
     { icon: Plus, label: "أضف مشروع", href: "/post-job" },
     { icon: Briefcase, label: "تصفح المشاريع", href: "/video-jobs" },
     { icon: FilePenLine, label: "عروضي", href: "/proposals" },
-    { icon: Briefcase, label: "أعمالي", href: "/projects" },
+    { icon: Briefcase, label: "مشاريعي", href: "/projects" },
   ];
 
   useEffect(() => {

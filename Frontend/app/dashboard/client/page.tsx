@@ -443,7 +443,7 @@ function JobProposalsGroup({
               key={p.id}
               proposal={p}
               locked={locked}
-              hired={hired.has(p.freelancer.id) || p.status === "hired"}
+              hired={hired.has(p.freelancer.id) || p.status === "accepted"}
               declined={declined.has(p.id) || p.status === "declined"}
               onHire={() => onHireProposal(p)}
               onMessage={() => onMessage(p.freelancer.id)}
