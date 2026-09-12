@@ -4,7 +4,9 @@ import (
 	"encoding/gob"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
+	"strings"
 
 	"github.com/OmarHosny18/APP-frontend/common"
 	"github.com/OmarHosny18/APP-frontend/internal/entity"
@@ -23,7 +25,11 @@ func NewSessionStore(rp *redis.Pool, sessionKey []byte, prefix string,
 	}
 
 	ss.Options.Path = opts.Path
-	ss.Options.SameSite = http.SameSiteLaxMode
+	if opts.SameSite != 0 {
+		ss.Options.SameSite = opts.SameSite
+	} else {
+		ss.Options.SameSite = http.SameSiteLaxMode
+	}
 	ss.Options.Secure = opts.Secure
 	ss.Options.HttpOnly = opts.HttpOnly
 	ss.Options.Domain = opts.Domain
@@ -57,20 +63,42 @@ func MustInitSessionStore(rPool *redis.Pool, sessionKey []byte, env *Env, url *U
 }
 
 func NewSessionStoreOptions(env *Env, url *URL, path, host string, maxAge int) *sessions.Options {
-	domain := fmt.Sprintf(".%s", host)
+	cleanHost := host
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		cleanHost = h
+	}
 
-	if env.IsDev() {
-		domain = fmt.Sprintf("%s", "localhost")
+	// For localhost, dev environments, or direct IP addresses, RFC 6265 requires
+	// omitting the Domain attribute (empty string) so browsers treat it as a host-only cookie.
+	// Setting Domain="localhost" causes modern browsers to reject or fail to send the cookie.
+	domain := ""
+	isIP, isLocal := common.ValidateDomain(cleanHost)
+	if !isIP && !isLocal && env != nil && !env.IsDev() && cleanHost != "" {
+		// Production with actual domain name: prefix with dot for subdomain sharing if desired
+		if strings.Contains(cleanHost, ".") {
+			domain = fmt.Sprintf(".%s", cleanHost)
+		}
+	}
+
+	isSecure := false
+	if url != nil && url.Schema == "https" {
+		isSecure = true
+	}
+
+	sameSite := http.SameSiteLaxMode
+	if isSecure {
+		sameSite = http.SameSiteNoneMode
 	}
 
 	return &sessions.Options{
 		Path:   path,
 		MaxAge: maxAge,
-		Secure: url.Schema == "https",
+		Secure: isSecure,
 		// HttpOnly must always be true so the session-ID cookie is never readable by
 		// JavaScript (XSS protection). It is independent of the transport scheme.
 		HttpOnly: true,
 		Domain:   domain,
+		SameSite: sameSite,
 	}
 }
 

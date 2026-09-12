@@ -367,9 +367,11 @@ func (h *Handler) HandleReviewVerification(w http.ResponseWriter, r *http.Reques
 		if body.RejectionReason != nil {
 			notifPayload["reason"] = *body.RejectionReason
 		}
-		h.socketManager.sendJSONToUser(verification.UserID.String(), map[string]interface{}{
-			"type": "verification:updated",
-			"data": notifPayload,
-		})
+		if h.Hub != nil {
+			h.Hub.SendJSONToUser(verification.UserID.String(), map[string]interface{}{
+				"type": "verification:updated",
+				"data": notifPayload,
+			})
+		}
 	}
 }

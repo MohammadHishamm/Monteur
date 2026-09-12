@@ -96,6 +96,9 @@ func (u *URL) Parse(s string) {
 }
 
 func (u *URL) String() string {
+	if u.Port == "" || (u.Schema == "http" && u.Port == "80") || (u.Schema == "https" && u.Port == "443") {
+		return fmt.Sprintf("%s://%s", u.Schema, u.Host)
+	}
 	return fmt.Sprintf("%s://%s:%s", u.Schema, u.Host, u.Port)
 }
 

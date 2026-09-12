@@ -45,12 +45,15 @@ Connected to PostgreSQL
 Connected to Redis
 ```
 
-The server listens on `http://localhost:8000` with the following endpoints:
-- `GET /ping` - Simple health check
-- `GET /v1/health` - Detailed health status
-- `POST /v1/auth/login` - User login
-- `POST /v1/auth/register` - User registration
-- `POST /v1/auth/logout` - User logout
+The server listens on `http://localhost:8000` with the primary endpoints:
+- `GET /ping` - Server health check
+- `POST /v1/auth/email/signup` - User registration
+- `POST /v1/auth/email/signin` - User sign-in (sets HttpOnly session cookie + returns JWT)
+- `POST /v1/auth/signout` - User sign-out (clears session & auth cookies)
+- `GET /v1/auth/session` - Current session status
+- `GET /v1/ws/notifications` - Real-time WebSocket notifications & messaging
+
+> 📘 **Full Architecture & API Documentation**: See [BACKEND_DOCUMENTATION.md](./BACKEND_DOCUMENTATION.md) for full architectural specs, cookie security rules, WebSocket integration guides, and complete API endpoint directories.
 
 ### 3. Test the Backend
 
@@ -193,6 +196,7 @@ Backend/
 │   ├── store/            # Data access layer
 │   ├── cache/            # Redis cache abstraction
 │   ├── ratelimiter/      # Rate limiting middleware
+│   ├── realtime/         # WebSocket Hub & real-time messaging
 │   ├── entity/           # Domain models
 │   └── apperror/         # Error handling
 ├── common/               # Shared utilities

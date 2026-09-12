@@ -70,8 +70,13 @@ func (h *Handler) WithRequiredAuth(next http.Handler) http.Handler {
 			return
 		}
 
+		sessionID := ""
+		if sess != nil && sess.Raw != nil {
+			sessionID = sess.Raw.ID
+		}
+
 		common.Logger.Info("authenticated user access allowed",
-			slog.Any("sessionID", sess.Raw.ID),
+			slog.String("sessionID", sessionID),
 			slog.String("component", "handler.middleware"),
 			slog.String("method", "WithRequiredAuth"))
 
@@ -110,11 +115,16 @@ func (h *Handler) WithRequiredGuest(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		sess, err := h.service.Auth.GetRequestSession(r, false)
 		if err != nil || sess.IsAuth() {
+			sessionID := ""
+			if sess != nil && sess.Raw != nil {
+				sessionID = sess.Raw.ID
+			}
+
 			common.Logger.Error("authenticated user access",
 				slog.String("error", "require a guest access"),
 				slog.Any("error", err),
 				slog.Any("session", sess),
-				slog.Any("sessionID", sess.Raw.ID),
+				slog.String("sessionID", sessionID),
 				slog.Bool("isAuth", sess.IsAuth()),
 				slog.String("component", "handler.middleware"),
 				slog.String("method", "WithRequiredGuest"))
@@ -484,7 +494,7 @@ func (h *Handler) EnsureSession(next http.Handler) http.Handler {
 			}
 
 		} else {
-			if sess.Raw.IsNew {
+			if sess.Raw != nil && sess.Raw.IsNew {
 				common.Logger.Debug("saving new session",
 					slog.Any("session", sess),
 					slog.String("component", "handler.middleware"),
@@ -500,7 +510,7 @@ func (h *Handler) EnsureSession(next http.Handler) http.Handler {
 					common.WriteJson(w, http.StatusInternalServerError, apperror.ErrInternalServer)
 					return
 				}
-			} else if sess.IsAuth() && shouldTouchSession(sess.Raw, time.Now()) {
+			} else if sess.IsAuth() && sess.Raw != nil && shouldTouchSession(sess.Raw, time.Now()) {
 				touchSession(sess.Raw, time.Now())
 				if err := sess.Raw.Save(r, w); err != nil {
 					common.Logger.Error("failed to touch request session",
@@ -515,8 +525,13 @@ func (h *Handler) EnsureSession(next http.Handler) http.Handler {
 			}
 		}
 
+		sessionID := ""
+		if sess != nil && sess.Raw != nil {
+			sessionID = sess.Raw.ID
+		}
+
 		common.Logger.Debug("ensured request session is valid",
-			slog.Any("sessionID", sess.Raw.ID),
+			slog.String("sessionID", sessionID),
 			slog.Bool("isAuth", sess.IsAuth()),
 			slog.String("component", "handler.middleware"),
 			slog.String("method", "EnsureSession"))

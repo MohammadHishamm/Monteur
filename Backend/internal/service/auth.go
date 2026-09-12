@@ -2,8 +2,10 @@ package service
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/OmarHosny18/APP-frontend/common"
@@ -15,6 +17,7 @@ import (
 	"github.com/boj/redistore"
 	"github.com/google/uuid"
 	"github.com/gorilla/sessions"
+	"github.com/lib/pq"
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/gothic"
 	"github.com/markbates/goth/providers/discord"
@@ -243,10 +246,9 @@ func (s *AuthService) GetSessionUserProvider(sess *sessions.Session) (*entity.Au
 }
 
 func (s *AuthService) GetRequestSession(r *http.Request, fetchUser bool) (*entity.Session, error) {
+	// 1. Attempt Redis session cookie resolution via Gorilla Redistore
 	sess, err := s.session.New(r, config.Configs.SessionCookieName)
 	if err != nil {
-		// gorilla/sessions returns a valid blank session even on decode errors.
-		// Log and continue — the JWT cookie fallback below may still recover the user.
 		common.Logger.Warn("session cookie decode error, attempting JWT fallback",
 			slog.Any("error", err),
 			slog.String("component", "service.auth"),
@@ -254,62 +256,122 @@ func (s *AuthService) GetRequestSession(r *http.Request, fetchUser bool) (*entit
 	}
 
 	uID, uIDErr := s.GetSessionUserID(sess)
-	if uIDErr != nil || uID == nil {
-		// No usable user ID in the session. (There is no JWT-cookie fallback: the
-		// app is cookie-session based and never sets an `auth-token` cookie, so a
-		// decode/expiry here is simply an unauthenticated request → clean re-login.)
-		if uIDErr != nil {
-			return nil, uIDErr
-		}
-		// Session exists but contains no user ID (partial/stale session) — treat as unauthenticated
-		return nil, apperror.ErrUserNotAuthenticated
-	}
-
-	p, err := s.GetSessionUserProvider(sess)
-	if err != nil {
-		return nil, err
-	}
-
-	roles, err := s.GetSessionUserRoles(sess)
-	if err != nil {
-		return nil, err
-	}
-
-	version, err := s.GetSessionVersion(sess)
-	if err != nil {
-		return nil, err
-	}
-
-	// Get JWT tokens from session
-	accessToken, refreshToken := s.GetSessionJWTTokens(sess)
-
-	data := entity.NewSession(uID, p, roles)
-	data.WithRawSession(sess)
-	data.WithVersion(&version)
-	data.WithAccessToken(accessToken)
-	data.WithRefreshToken(refreshToken)
-
-	if fetchUser && uID != nil {
-		u, err := s.userSrv.GetUserByID(r.Context(), uID)
+	if uIDErr == nil && uID != nil {
+		p, err := s.GetSessionUserProvider(sess)
 		if err != nil {
 			return nil, err
 		}
 
-		data.WithUser(u)
+		roles, err := s.GetSessionUserRoles(sess)
+		if err != nil {
+			return nil, err
+		}
 
-		common.Logger.Debug("retrieved request session user from db",
-			slog.Any("session", sess),
-			slog.Any("user", u),
-			slog.String("component", "service.auth"),
-			slog.String("method", "GetRequestSession"))
+		version, err := s.GetSessionVersion(sess)
+		if err != nil {
+			return nil, err
+		}
+
+		// Get JWT tokens from session
+		accessToken, refreshToken := s.GetSessionJWTTokens(sess)
+
+		data := entity.NewSession(uID, p, roles)
+		data.WithRawSession(sess)
+		data.WithVersion(&version)
+		data.WithAccessToken(accessToken)
+		data.WithRefreshToken(refreshToken)
+
+		if fetchUser && uID != nil {
+			u, err := s.userSrv.GetUserByID(r.Context(), uID)
+			if err != nil {
+				return nil, err
+			}
+
+			data.WithUser(u)
+		}
+
+		return data, nil
 	}
 
-	common.Logger.Debug("retrieved request session",
-		slog.Any("session", sess),
-		slog.String("component", "service.auth"),
-		slog.String("method", "GetRequestSession"))
+	// 2. Fallback: Authenticate via cryptographically verified JWT Access Token
+	// Supports Bearer header, query params (for WebSockets), or secure token cookies
+	jwtToken := s.extractAccessToken(r)
+	if jwtToken != "" {
+		claims, err := common.VerifyAccessToken(jwtToken)
+		if err == nil && claims != nil && claims.UserID != "" {
+			parsedUID, err := uuid.Parse(claims.UserID)
+			if err == nil {
+				provider := s.ValidateProvider(claims.Provider)
+				roleNames := make(entity.RoleNames, len(claims.Roles))
+				for i, rn := range claims.Roles {
+					roleNames[i] = entity.RoleName(rn)
+				}
 
-	return data, nil
+				data := entity.NewSession(&parsedUID, provider, &roleNames)
+				data.WithRawSession(&sessions.Session{ID: parsedUID.String()})
+				data.WithAccessToken(jwtToken)
+
+				u, err := s.userSrv.GetUserByID(r.Context(), &parsedUID)
+				if err != nil {
+					return nil, err
+				}
+				if u.IsBanned {
+					return nil, apperror.ErrUserAlreadyBanned
+				}
+				if !u.IsActive {
+					return nil, apperror.ErrUserNotAuthenticated.WithDetail("account is not active")
+				}
+				data.WithUser(u)
+
+				common.Logger.Debug("authenticated request via verified JWT token",
+					slog.String("userID", parsedUID.String()),
+					slog.String("component", "service.auth"),
+					slog.String("method", "GetRequestSession"))
+
+				return data, nil
+			}
+		}
+	}
+
+	if uIDErr != nil {
+		return nil, uIDErr
+	}
+	return nil, apperror.ErrUserNotAuthenticated
+}
+
+// extractAccessToken safely retrieves a JWT access token from Authorization header,
+// query parameters (standard for browser WebSockets), or token cookies.
+func (s *AuthService) extractAccessToken(r *http.Request) string {
+	if r == nil {
+		return ""
+	}
+
+	// Authorization: Bearer <token>
+	authHeader := strings.TrimSpace(r.Header.Get("Authorization"))
+	if strings.HasPrefix(strings.ToLower(authHeader), "bearer ") {
+		token := strings.TrimSpace(authHeader[7:])
+		if token != "" {
+			return token
+		}
+	}
+
+	// Query parameter: ?token= or ?access_token=
+	for _, param := range []string{"token", "access_token"} {
+		if token := strings.TrimSpace(r.URL.Query().Get(param)); token != "" {
+			return token
+		}
+	}
+
+	// Token cookies: access_token, auth_token, auth-token
+	for _, name := range []string{"access_token", "auth_token", "auth-token"} {
+		if cookie, err := r.Cookie(name); err == nil {
+			if token := strings.TrimSpace(cookie.Value); token != "" {
+				return token
+			}
+		}
+	}
+
+	return ""
 }
 
 func (s *AuthService) SafeGetRequestSession(r *http.Request, fetchUser bool) *entity.Session {
@@ -412,6 +474,10 @@ func (s *AuthService) UpdateSessionUser(sess *entity.Session, w http.ResponseWri
 func (s *AuthService) VerifyVersion(sess *entity.Session, current string) bool {
 	if sess == nil {
 		return false
+	}
+
+	if sess.Raw == nil {
+		return true
 	}
 
 	v, ok := sess.Raw.Values["version"]
@@ -622,4 +688,131 @@ func (s *AuthService) RevokeRefreshToken(ctx context.Context, token string) erro
 	}
 
 	return nil
+}
+
+type AuthResult struct {
+	User         *entity.User `json:"user"`
+	AccessToken  string       `json:"access_token"`
+	RefreshToken string       `json:"refresh_token,omitempty"`
+	TokenType    string       `json:"token_type"`
+	ExpiresIn    int          `json:"expires_in"`
+	Roles        []string     `json:"roles"`
+}
+
+// AuthenticateWithEmail verifies credentials, checks activation, and produces access and refresh tokens.
+func (s *AuthService) AuthenticateWithEmail(ctx context.Context, email, password, ip, ua string) (*AuthResult, error) {
+	u, err := s.userSrv.GetUserByEmail(ctx, email)
+	if err != nil {
+		return nil, apperror.ErrInternalServer
+	}
+	if u == nil {
+		return nil, apperror.ErrUserNotAuthenticated
+	}
+
+	if !u.Is_activated {
+		return nil, apperror.ErrUserNotAuthenticated.WithDetail("account not activated")
+	}
+
+	if u.Password == nil || *u.Password == "" {
+		return nil, apperror.ErrUserNotAuthenticated.WithDetail("account linked to social login")
+	}
+
+	if !common.VerifyPassword(*u.Password, password) {
+		return nil, apperror.ErrUserNotAuthenticated.WithDetail("incorrect password")
+	}
+
+	roles := make([]string, len(u.Roles))
+	for i, role := range u.Roles {
+		roles[i] = role.String()
+	}
+
+	accessToken, err := common.GenerateAccessToken(u.ID.String(), "email", roles)
+	if err != nil {
+		return nil, err
+	}
+
+	refreshToken, err := s.CreateRefreshToken(ctx, u.ID, ip, ua)
+	if err != nil {
+		return nil, err
+	}
+
+	return &AuthResult{
+		User:         u,
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		TokenType:    "Bearer",
+		ExpiresIn:    15 * 60,
+		Roles:        roles,
+	}, nil
+}
+
+// RegisterWithEmail checks availability, creates user, stores password, and generates credentials.
+func (s *AuthService) RegisterWithEmail(ctx context.Context, req *entity.EmailAuthRequest, ip, ua string) (*AuthResult, error) {
+	fullName := req.UserName
+	if req.FirstName != nil {
+		fullName = strings.TrimSpace(*req.FirstName)
+	}
+	if req.LastName != nil {
+		if fullName != "" {
+			fullName += " "
+		}
+		fullName += strings.TrimSpace(*req.LastName)
+	}
+	if fullName == "" {
+		fullName = strings.Split(req.Email, "@")[0]
+	}
+
+	u, err := s.userSrv.Create(ctx, req.Email, req.Password, fullName, "", req.UserType)
+	if err != nil {
+		if errors.Is(err, apperror.ErrUserAlreadyExists) || errors.Is(err, apperror.ErrUserEmailAlreadyExists) {
+			return nil, apperror.ErrUserEmailAlreadyExists
+		}
+		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
+			return nil, apperror.ErrUserEmailAlreadyExists
+		}
+		return nil, err
+	}
+
+	// Only immediately activate in development mode to allow local testing without SMTP.
+	// In production, users must verify their email via /auth/activate before receiving access credentials.
+	isDev := config.Configs != nil && config.Configs.Env != nil && config.Configs.Env.IsDev()
+	if isDev {
+		if _, err := s.userSrv.UpdateUserStatus(ctx, u.ID, true); err != nil {
+			return nil, err
+		}
+		u.IsEmailVerified = true
+		u.Is_activated = true
+	} else {
+		// In production, do not activate or generate session tokens.
+		// Return the unactivated user so the handler can send activation email.
+		return &AuthResult{
+			User:      u,
+			TokenType: "Bearer",
+			Roles:     []string{req.UserType},
+		}, nil
+	}
+
+	roles := make([]string, len(u.Roles))
+	for i, role := range u.Roles {
+		roles[i] = role.String()
+	}
+
+	accessToken, err := common.GenerateAccessToken(u.ID.String(), "email", roles)
+	if err != nil {
+		return nil, err
+	}
+
+	refreshToken, err := s.CreateRefreshToken(ctx, u.ID, ip, ua)
+	if err != nil {
+		return nil, err
+	}
+
+	return &AuthResult{
+		User:         u,
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		TokenType:    "Bearer",
+		ExpiresIn:    15 * 60,
+		Roles:        roles,
+	}, nil
 }
