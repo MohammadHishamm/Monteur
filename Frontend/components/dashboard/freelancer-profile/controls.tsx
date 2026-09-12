@@ -21,16 +21,16 @@ export function Panel({
   return (
     <section
       id={id}
-      className="scroll-mt-24 bg-white p-6"
+      className="scroll-mt-24 bg-white p-5"
       style={{ border: `1px solid ${P.border}` }}
     >
-      <div className="mb-5 flex items-start justify-between gap-3 border-b pb-4" style={{ borderColor: P.border }}>
+      <div className="mb-4 flex items-start justify-between gap-3 border-b pb-3" style={{ borderColor: P.border }}>
         <div>
-          <h2 className="tracking-tight text-xl font-bold" style={{ color: P.text }}>
+          <h2 className="font-bold" style={{ color: P.text }}>
             {title}
           </h2>
           {desc && (
-            <p className="mt-1 text-sm" style={{ color: P.muted }}>
+            <p className="mt-0.5 text-xs" style={{ color: P.muted }}>
               {desc}
             </p>
           )}
@@ -155,7 +155,7 @@ export function ChipInput({
         <button
           type="button"
           onClick={commit}
-          className="inline-flex h-10.5 shrink-0 items-center gap-1.5 rounded-xl px-4 text-sm font-semibold transition-colors hover:bg-black/5"
+          className="inline-flex h-10.5 shrink-0 items-center gap-1.5 rounded-lg px-4 text-sm font-semibold transition-colors hover:bg-black/5"
           style={{ border: `1px solid ${P.border}`, color: P.text }}
         >
           <Plus className="size-4" />

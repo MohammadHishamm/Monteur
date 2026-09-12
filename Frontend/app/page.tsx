@@ -28,7 +28,7 @@ const metrics = [
 const steps = [
   {
     num: "١",
-    title: "صِف البريف",
+    title: "صِف الوظيفة",
     body: "اكتب نوع الفيديو والمدة والستايل، والذكاء الاصطناعي يحوّلها إلى متطلبات واضحة بميزانية مقترحة.",
     icon: FileText,
   },
@@ -113,7 +113,7 @@ const values = [
   {
     icon: Sparkles,
     title: "مطابقة بالذكاء الاصطناعي",
-    body: "نحلّل بريفك ونرشّح أنسب ٣ مونتيرين فقط — بدل تصفّح عشرات الحسابات.",
+    body: "نحلّل وظيفتك ونرشّح أنسب ٣ مونتيرين فقط — بدل تصفّح عشرات الحسابات.",
   },
   {
     icon: ShieldCheck,
@@ -255,7 +255,7 @@ export default function Home() {
               لمشروعك في دقائق
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed tracking-wide text-white/80 sm:text-xl sm:leading-[1.8] lg:mx-0">
-              نحلل بريف مشروعك بالذكاء الاصطناعي ونرشّح لك مستقلين مطابقين للأسلوب، الميزانية، وسرعة التسليم.
+              نحلل وظيفتك بالذكاء الاصطناعي ونرشّح لك مستقلين مطابقين للأسلوب، الميزانية، وسرعة التسليم.
             </p>
 
             <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center lg:justify-start">
@@ -365,7 +365,7 @@ export default function Home() {
           <SectionHeading
             eyebrow="كيف يعمل"
             title="ثلاث خطوات، لا أكثر"
-            subtitle="من بريف غامض إلى فيديو جاهز — صُمّمت كل خطوة لتوفّر وقتك."
+            subtitle="من وظيفة غامضة إلى فيديو جاهز — صُمّمت كل خطوة لتوفّر وقتك."
           />
 
           <div className="mt-16 grid gap-10 md:grid-cols-3 md:gap-8">

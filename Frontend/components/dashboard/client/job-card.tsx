@@ -111,7 +111,7 @@ export function JobCard({
             <button
               type="button"
               onClick={onClose}
-              className="inline-flex h-10 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold transition-opacity hover:opacity-80"
+              className="inline-flex h-10 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-opacity hover:opacity-80"
               style={{ border: `1px solid ${P.border}`, color: P.muted }}
             >
               إغلاق
@@ -121,7 +121,7 @@ export function JobCard({
             type="button"
             onClick={onToggle}
             aria-expanded={open}
-            className="inline-flex h-10 items-center gap-1.5 rounded-xl px-4 text-sm font-semibold transition-opacity hover:opacity-80"
+            className="inline-flex h-10 items-center gap-1.5 rounded-lg px-4 text-sm font-semibold transition-opacity hover:opacity-80"
             style={{
               background: `${P.primary}14`,
               color: P.primaryText,
@@ -152,7 +152,7 @@ export function JobCard({
                   key={p.id}
                   proposal={p}
                   locked={locked}
-                  hired={hired.has(p.freelancer.id) || p.status === "hired"}
+                  hired={hired.has(p.freelancer.id) || p.status === "accepted"}
                   declined={declined.has(p.id) || p.status === "declined"}
                   onHire={() => onHire(p)}
                   onMessage={() => onMessage(p.freelancer.id)}
@@ -165,8 +165,8 @@ export function JobCard({
               style={{ color: P.muted }}
             >
               {job.status === "in_progress"
-                ? "تم التعاقد على هذا البريف — لا عروض جديدة."
-                : "لا توجد عروض على هذا البريف بعد."}
+                ? "تم التعاقد على هذه الوظيفة — لا عروض جديدة."
+                : "لا توجد عروض على هذه الوظيفة بعد."}
             </p>
           )}
         </div>

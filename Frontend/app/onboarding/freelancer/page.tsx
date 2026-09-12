@@ -118,7 +118,7 @@ export default function FreelancerOnboardingPage() {
   const meta = [
     { eyebrow: "الملف الأساسي", title: <>لنبدأ <span style={{ color: P.primaryText }}>بملفك</span></>, subtitle: "هذه المعلومات تظهر في أعلى ملفك العام أمام العملاء." },
     { eyebrow: "نبذة عنك", title: <>عرّف العملاء <span style={{ color: P.primaryText }}>بأسلوبك</span></>, subtitle: "اكتب نبذة واضحة عمّا تقدّمه من خبرة في المونتاج وما يميّزك." },
-    { eyebrow: "أدواتك", title: <>ما الذي <span style={{ color: P.primaryText }}>تتقنه</span>؟</>, subtitle: "نستخدم أدواتك لمطابقتك مع البريفات المناسبة." },
+    { eyebrow: "أدواتك", title: <>ما الذي <span style={{ color: P.primaryText }}>تتقنه</span>؟</>, subtitle: "نستخدم أدواتك لمطابقتك مع الوظائف المناسبة." },
     { eyebrow: "الشو-ريل والأعمال", title: <>أضف <span style={{ color: P.primaryText }}>أعمالك</span></>, subtitle: "كل مقطع تضيفه يصبح دراسة حالة كاملة. يمكنك التخطّي وإضافتها لاحقاً." },
   ][step - 1];
 

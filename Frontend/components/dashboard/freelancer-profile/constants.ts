@@ -1,5 +1,5 @@
 import { CATEGORY_LABELS, type Category } from "@/components/freelancers/types";
-import { Briefcase, FolderOpen, Languages as LanguagesIcon, User, Wrench } from "lucide-react";
+import { Briefcase, Languages as LanguagesIcon, User, Wrench } from "lucide-react";
 import type { EditableProfile } from "~/components/dashboard/profile-editor-types";
 
 /* ── shared field styling (sharp surfaces) ── */
@@ -14,7 +14,6 @@ export const SECTIONS = [
   { id: "about", label: "النبذة الاحترافية", icon: Briefcase },
   { id: "skills", label: "الأدوات", icon: Wrench },
   { id: "languages", label: "اللغات", icon: LanguagesIcon },
-  { id: "portfolio", label: "الشو-ريل والأعمال", icon: FolderOpen },
 ];
 
 export function computeCompleteness(p: EditableProfile | null): number {

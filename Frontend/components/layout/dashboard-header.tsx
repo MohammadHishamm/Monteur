@@ -46,9 +46,17 @@ interface DashboardHeaderProps {
   };
   notifications?: number;
   onMenuClick?: () => void;
+  /** Hide the menu button on lg+ screens, where the sidebar is always visible. */
+  persistentSidebar?: boolean;
 }
 
-export function DashboardHeader({ userRole, user, notifications = 0, onMenuClick }: DashboardHeaderProps) {
+export function DashboardHeader({
+  userRole,
+  user,
+  notifications = 0,
+  onMenuClick,
+  persistentSidebar = false,
+}: DashboardHeaderProps) {
   const pathname = usePathname();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -78,7 +86,7 @@ export function DashboardHeader({ userRole, user, notifications = 0, onMenuClick
     { icon: Plus, label: "أضف مشروع", href: "/post-job" },
     { icon: Briefcase, label: "تصفح المشاريع", href: "/video-jobs" },
     { icon: FilePenLine, label: "عروضي", href: "/proposals" },
-    { icon: Briefcase, label: "أعمالي", href: "/projects" },
+    { icon: Briefcase, label: "مشاريعي", href: "/projects" },
   ];
 
   useEffect(() => {
@@ -199,7 +207,7 @@ export function DashboardHeader({ userRole, user, notifications = 0, onMenuClick
         const n = payload.notification as Partial<NavbarNotification & { type?: string }>;
         if (n.type === "new_proposal") {
           triggerIncomingMessageAlert();
-          setProposalToast({ id: Date.now(), title: "عرض جديد على بريفك", href: "/client" });
+          setProposalToast({ id: Date.now(), title: "عرض جديد على وظيفتك", href: "/client" });
           // Immediately refresh the client dashboard so new proposal appears in the list
           void queryClient.invalidateQueries({ queryKey: userKeys.dashboard.client() });
         }
@@ -312,7 +320,7 @@ export function DashboardHeader({ userRole, user, notifications = 0, onMenuClick
         <div className="flex min-w-0 items-center gap-2 lg:gap-4">
           <button
             onClick={onMenuClick}
-            className="inline-flex size-9 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            className={`inline-flex size-9 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground${persistentSidebar ? " lg:hidden" : ""}`}
             aria-label="فتح القائمة"
           >
             <Menu className="size-4" />

@@ -38,7 +38,7 @@ export function LanguagesSection({
         <button
           type="button"
           onClick={add}
-          className="inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-sm font-semibold transition-colors hover:bg-black/5"
+          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold transition-colors hover:bg-black/5"
           style={{ border: `1px solid ${P.border}`, color: P.text }}
         >
           <Plus className="size-4" />

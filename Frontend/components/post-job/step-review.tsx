@@ -16,7 +16,7 @@ export function StepReview({ form }: { form: PostJobForm }) {
   return (
     <div className="flex flex-col gap-6">
       <StepIntro
-        title="راجع بريفك"
+        title="راجع وظيفتك"
         subtitle="تأكد من التفاصيل قبل النشر — يمكنك الرجوع لأي خطوة للتعديل."
       />
 

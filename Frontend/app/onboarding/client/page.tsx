@@ -53,7 +53,7 @@ const INDUSTRIES: OptionItem[] = [
 ];
 
 const INTENTS: OptionItem[] = [
-  { value: "one-project", label: "بريف واحد", desc: "لديّ فيديو محدد أريد تنفيذه الآن.", icon: FileText },
+  { value: "one-project", label: "وظيفة واحدة", desc: "لديّ فيديو محدد أريد تنفيذه الآن.", icon: FileText },
   { value: "ongoing", label: "محتوى مستمر", desc: "أحتاج مونتاجاً منتظماً على المدى الطويل.", icon: Repeat },
   { value: "team", label: "فريق مونتاج", desc: "أبحث عن عدة مونتيرين لتشكيل فريق.", icon: UsersRound },
   { value: "exploring", label: "أستكشف فقط", desc: "أتعرّف على المنصة وما تقدّمه.", icon: Compass },
@@ -73,9 +73,9 @@ const BUDGETS: OptionItem[] = [
 ];
 
 const ENGAGEMENTS: OptionItem[] = [
-  { value: "fixed", label: "سعر ثابت", desc: "ميزانية محددة لكامل البريف." },
+  { value: "fixed", label: "سعر ثابت", desc: "ميزانية محددة لكامل الوظيفة." },
   { value: "hourly", label: "بالساعة", desc: "أدفع مقابل وقت العمل الفعلي." },
-  { value: "both", label: "كلاهما", desc: "حسب طبيعة كل بريف." },
+  { value: "both", label: "كلاهما", desc: "حسب طبيعة كل وظيفة." },
 ];
 
 const TOTAL = 4;
@@ -185,7 +185,7 @@ export default function ClientOnboardingPage() {
 
       {step === 4 && (
         <div className="flex flex-col gap-6">
-          <Field label="ميزانية البريف المعتادة">
+          <Field label="ميزانية الوظيفة المعتادة">
             <OptionGrid options={BUDGETS} value={data.budgetBand} onChange={(v) => set({ budgetBand: v as ClientOnboarding["budgetBand"] })} />
           </Field>
           <Field label="طريقة التعاقد المفضّلة">

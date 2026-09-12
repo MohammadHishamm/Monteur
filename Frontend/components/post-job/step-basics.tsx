@@ -11,7 +11,7 @@ export function StepBasics({ form }: { form: PostJobForm }) {
         title="ابدأ بالأساسيات"
         subtitle="عنوان واضح وتخصيص دقيق يجذبان أفضل المونتيرين."
       />
-      <Field label="عنوان البريف" hint={`${toArabicDigits(title.length)}/٨٠`}>
+      <Field label="عنوان الوظيفة" hint={`${toArabicDigits(title.length)}/٨٠`}>
         <input
           value={title}
           maxLength={80}
