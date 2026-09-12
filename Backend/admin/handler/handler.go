@@ -5,6 +5,7 @@
 //
 //	/admin/                                  index
 //	/admin/login/  /admin/logout/            auth
+//	/admin/two-factor/setup/  …/verify/      TOTP enrolment and challenge
 //	/admin/<app>/                            app index
 //	/admin/<app>/<model>/                    changelist (GET) / bulk actions (POST)
 //	/admin/<app>/<model>/add/                add form
@@ -28,23 +29,44 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+// TwoFactorConfig controls TOTP enrolment.
+type TwoFactorConfig struct {
+	Required bool
+	Issuer   string
+}
+
+// Deps are the collaborators a Handler needs.
+type Deps struct {
+	Site      *site.Site
+	Models    *service.ModelService
+	Logs      *service.LogService
+	Auth      *auth.Authenticator
+	Admins    *auth.Repository
+	Sessions  *auth.Sessions
+	Throttle  *auth.Throttle
+	Renderer  *web.Renderer
+	TwoFactor TwoFactorConfig
+}
+
 // Handler serves the portal.
 type Handler struct {
-	site     *site.Site
-	models   *service.ModelService
-	logs     *service.LogService
-	auth     *auth.Authenticator
-	admins   *auth.Repository
-	sessions *auth.Sessions
-	render   *web.Renderer
+	site      *site.Site
+	models    *service.ModelService
+	logs      *service.LogService
+	auth      *auth.Authenticator
+	admins    *auth.Repository
+	sessions  *auth.Sessions
+	throttle  *auth.Throttle
+	render    *web.Renderer
+	twoFactor TwoFactorConfig
 }
 
 // New wires the handler.
-func New(s *site.Site, models *service.ModelService, logs *service.LogService,
-	authn *auth.Authenticator, admins *auth.Repository, sessions *auth.Sessions, render *web.Renderer) *Handler {
+func New(d Deps) *Handler {
 	return &Handler{
-		site: s, models: models, logs: logs,
-		auth: authn, admins: admins, sessions: sessions, render: render,
+		site: d.Site, models: d.Models, logs: d.Logs,
+		auth: d.Auth, admins: d.Admins, sessions: d.Sessions, throttle: d.Throttle,
+		render: d.Renderer, twoFactor: d.TwoFactor,
 	}
 }
 
@@ -66,16 +88,35 @@ func (h *Handler) Register(r chi.Router) {
 		})
 		r.Handle("/static/*", web.StaticHandler(base+"/static/"))
 
+		gate := auth.Gate{
+			Sessions:         h.sessions,
+			Repo:             h.admins,
+			LoginPath:        base + "/login/",
+			SetupPath:        base + "/two-factor/setup/",
+			VerifyPath:       base + "/two-factor/verify/",
+			RequireTwoFactor: h.twoFactor.Required,
+		}
+
 		r.Group(func(r chi.Router) {
 			r.Use(auth.RequireCSRF(h.sessions))
 
 			r.Get("/login/", h.LoginForm)
 			r.Post("/login/", h.Login)
 
+			// Password-only stage: logout and the second-factor pages.
 			r.Group(func(r chi.Router) {
-				r.Use(auth.RequireLogin(h.sessions, h.admins, base+"/login/"))
-
+				r.Use(gate.RequirePassword)
 				r.Post("/logout/", h.Logout)
+				r.Get("/two-factor/setup/", h.TwoFactorSetupForm)
+				r.Post("/two-factor/setup/", h.TwoFactorSetup)
+				r.Get("/two-factor/verify/", h.TwoFactorVerifyForm)
+				r.Post("/two-factor/verify/", h.TwoFactorVerify)
+			})
+
+			// Fully authenticated stage: everything else.
+			r.Group(func(r chi.Router) {
+				r.Use(gate.RequirePassword, gate.RequireSecondFactor)
+
 				r.Get("/", h.Index)
 				r.Get("/{app}/", h.AppIndex)
 

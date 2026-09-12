@@ -317,6 +317,15 @@ func (h *Handler) field(m *site.Model, c schema.Column, row repository.Row, post
 	if f.Widget == form.WidgetPassword {
 		f.Value = ""
 	}
+	if m.IsSecret(c.Name) {
+		f.Widget = form.WidgetSecret
+		f.Value = ""
+		f.Display = secretDisplay(stored)
+		f.Readonly = isAdd // nothing to clear on a new row
+		if isAdd {
+			f.Display = "Not set"
+		}
+	}
 
 	switch f.Widget {
 	case form.WidgetArray:
@@ -353,6 +362,13 @@ func (h *Handler) redirectAfterSave(w http.ResponseWriter, r *http.Request, m *s
 	default:
 		http.Redirect(w, r, changelistURL(m, preserved), http.StatusFound)
 	}
+}
+
+func secretDisplay(v any) string {
+	if v == nil || v == "" {
+		return "Not set"
+	}
+	return "Set"
 }
 
 func labelFor(col string) string {

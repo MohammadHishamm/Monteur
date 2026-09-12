@@ -13,7 +13,11 @@ import (
 
 	"github.com/OmarHosny18/APP-frontend/common"
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
+
+// pqArray adapts a []string for `= ANY($n)` parameters.
+func pqArray(s []string) any { return pq.Array(s) }
 
 // Admin is a portal user — a row of the admins table.
 type Admin struct {
@@ -23,6 +27,16 @@ type Admin struct {
 	PasswordHash string
 	IsActive     bool
 	LastLoginAt  *time.Time
+
+	// Two-factor state. Enrolled() is the only thing callers should ask.
+	TOTPSecret       *string
+	TOTPConfirmedAt  *time.Time
+	TOTPLastUsedStep int64
+}
+
+// TOTPEnrolled reports whether the admin has completed two-factor setup.
+func (a *Admin) TOTPEnrolled() bool {
+	return a.TOTPSecret != nil && *a.TOTPSecret != "" && a.TOTPConfirmedAt != nil
 }
 
 // ErrInvalidCredentials is returned for a wrong email/password or an
@@ -37,11 +51,13 @@ type Repository struct {
 // NewRepository wraps a database handle.
 func NewRepository(db *sql.DB) *Repository { return &Repository{db: db} }
 
-const adminColumns = `id, email, full_name, password_hash, is_active, last_login_at`
+const adminColumns = `id, email, full_name, password_hash, is_active, last_login_at,
+	totp_secret, totp_confirmed_at, totp_last_used_step`
 
 func (r *Repository) scan(row *sql.Row) (*Admin, error) {
 	var a Admin
-	err := row.Scan(&a.ID, &a.Email, &a.FullName, &a.PasswordHash, &a.IsActive, &a.LastLoginAt)
+	err := row.Scan(&a.ID, &a.Email, &a.FullName, &a.PasswordHash, &a.IsActive, &a.LastLoginAt,
+		&a.TOTPSecret, &a.TOTPConfirmedAt, &a.TOTPLastUsedStep)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
@@ -81,6 +97,25 @@ func (r *Repository) Create(ctx context.Context, email, fullName, passwordHash s
 		 ON CONFLICT (email) DO NOTHING
 		 RETURNING `+adminColumns,
 		email, passwordHash, fullName))
+}
+
+// EnrolTOTP stores a secret the admin has just proven they hold (by
+// entering a valid code at step) and marks it confirmed in one write, so an
+// enrolment is never half-done and a previous enrolment survives an
+// abandoned setup page.
+func (r *Repository) EnrolTOTP(ctx context.Context, id uuid.UUID, secret string, step int64) error {
+	_, err := r.db.ExecContext(ctx, `
+		UPDATE admins SET totp_secret = $2, totp_confirmed_at = NOW(), totp_last_used_step = $3, updated_at = NOW()
+		WHERE id = $1`, id, secret, step)
+	return err
+}
+
+// MarkTOTPUsed advances the replay guard. It only moves forward, so two
+// concurrent verifications cannot wind it back.
+func (r *Repository) MarkTOTPUsed(ctx context.Context, id uuid.UUID, step int64) error {
+	_, err := r.db.ExecContext(ctx, `
+		UPDATE admins SET totp_last_used_step = GREATEST(totp_last_used_step, $2) WHERE id = $1`, id, step)
+	return err
 }
 
 // Authenticator verifies credentials.

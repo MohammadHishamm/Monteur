@@ -253,6 +253,8 @@ func testDeleteFixtures(t *testing.T, h *harness, fx *fixtures) {
 	if n := h.count("users", "email LIKE 'admintest-%'"); n != 0 {
 		t.Fatalf("%d suite users survived deletion", n)
 	}
+	// Failed-login counters for this machine's IP are suite debris too.
+	h.clearLockouts()
 }
 
 // ─── helpers ─────────────────────────────────────────────────────────────────

@@ -471,6 +471,13 @@ func (s *ModelService) bind(m *site.Model, values url.Values, mode form.Mode) (m
 			first = raw[0]
 		}
 
+		if m.IsSecret(c.Name) {
+			// Never written from the form; the only allowed change is NULL.
+			if values.Has(c.Name + form.ClearSuffix) {
+				data[c.Name] = nil
+			}
+			continue
+		}
 		if m.IsPassword(c.Name) {
 			if strings.TrimSpace(first) == "" {
 				if mode == form.ModeAdd && !c.Nullable && !c.HasDefault {

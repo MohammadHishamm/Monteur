@@ -18,6 +18,7 @@
     {{if .Admin}}
     <div id="user-tools">
       Welcome, <strong>{{if .Admin.FullName}}{{.Admin.FullName}}{{else}}{{.Admin.Email}}{{end}}</strong>.
+      <a href="{{.Site.BasePath}}/two-factor/setup/">{{if .Admin.TOTPEnrolled}}Two-factor: on{{else}}Set up two-factor{{end}}</a> /
       <form method="post" action="{{.Site.BasePath}}/logout/" style="display:inline">
         <input type="hidden" name="{{.CSRFField}}" value="{{.CSRFToken}}">
         <button type="submit">Log out</button>

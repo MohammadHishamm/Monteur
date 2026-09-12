@@ -1,0 +1,27 @@
+{{define "title"}}Two-factor authentication | {{.Site.SiteTitle}}{{end}}
+{{define "content"}}
+{{if .Data.Error}}
+<p class="errornote">{{.Data.Error}}</p>
+{{end}}
+<div id="content-main">
+  <p>Enter the 6-digit code from your authenticator app to finish signing in.</p>
+  <form method="post" id="two-factor-form">
+    <input type="hidden" name="{{.CSRFField}}" value="{{.CSRFToken}}">
+    <input type="hidden" name="next" value="{{.Data.Next}}">
+    <div class="form-row">
+      <label for="id_code" class="required">Authentication code:</label>
+      <input type="text" name="code" id="id_code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]*" maxlength="8" autofocus required>
+    </div>
+    <div class="submit-row">
+      <input type="submit" value="Verify">
+    </div>
+  </form>
+  <p class="help" style="margin-top:12px">
+    Lost your device? Ask another administrator to clear your two-factor secret from the <em>Admins</em> page, then sign in and set it up again.
+  </p>
+  <form method="post" action="{{.Site.BasePath}}/logout/" style="margin-top:8px">
+    <input type="hidden" name="{{.CSRFField}}" value="{{.CSRFToken}}">
+    <button type="submit" class="button" style="background:#888">Cancel and log out</button>
+  </form>
+</div>
+{{end}}

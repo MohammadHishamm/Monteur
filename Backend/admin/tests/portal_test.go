@@ -19,11 +19,13 @@ func TestAdminPortal(t *testing.T) {
 		run  func(*testing.T, *harness, *fixtures)
 	}{
 		{"Auth", testAuth},
+		{"Lockout", testLockout},
 		{"CRUD", testCRUD},
 		{"Changelist", testChangelists},
 		{"Validation", testValidation},
 		{"InstantRefresh", testInstantRefresh},
 		{"Performance", testPerformance},
+		{"TwoFactor", testTwoFactor},
 		{"Cleanup", testDeleteFixtures},
 	}
 	for _, p := range phases {

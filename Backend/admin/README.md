@@ -30,6 +30,7 @@ Identical to Django's, so `api-v1.<domain>/admin/app/users/` in production:
 |---------------------------------------|----------------------------------------|
 | `/admin/`                             | Index — every model + recent actions   |
 | `/admin/login/`, `/admin/logout/`     | Session auth (cookie, CSRF-protected)  |
+| `/admin/two-factor/setup/`, `…/verify/` | TOTP enrolment (QR code) and challenge |
 | `/admin/app/`                         | App index                              |
 | `/admin/app/<table>/`                 | Changelist: search, filters, sort, paging, bulk delete |
 | `/admin/app/<table>/add/`             | Add form                               |
@@ -57,6 +58,26 @@ the list state through add/change pages so *Save* returns you where you were.
   (Django's `django_admin_log`), shown under *Recent actions*.
 - **Friendly constraint errors.** Unique/FK/CHECK violations are shown on
   the form instead of a 500.
+
+## Security
+
+- **Login lockout** (django-axes semantics). Failures are counted per client
+  IP *and* per account inside a rolling window; reaching the limit locks that
+  subject for a cool-down. Wrong two-factor codes count too. A successful
+  login clears the account's counter. State is in `admin_login_attempts`, so
+  every replica enforces the same lock. Defaults: 5 failures / 15 min → 15 min.
+- **Two-factor authentication** (django-otp semantics). TOTP (RFC 6238),
+  compatible with Google Authenticator, Authy, 1Password, etc. Enrol from the
+  header link *Set up two-factor*: scan the QR code, enter a code. From then
+  on every login is challenged for a code; a code cannot be replayed. With
+  `ADMIN_2FA_REQUIRED=true` (the production default) an admin who has not
+  enrolled is sent to setup before they can see anything.
+  **Lost device:** another admin opens *Admins → that admin* and ticks
+  *Clear* next to *Totp secret*; the secret is never displayed. The admin
+  then signs in with their password and enrols again.
+- Sessions are signed **and encrypted** cookies scoped to `/admin`, `HttpOnly`,
+  `SameSite=Lax`, `Secure` in production. Every POST is CSRF-checked.
+- All pages are `Cache-Control: no-store` and `X-Frame-Options: DENY`.
 
 ## Architecture
 
@@ -114,6 +135,11 @@ Set `DisableAdd`, `DisableChange` or `DisableDelete` for read-only tables.
 | `ADMIN_BOOTSTRAP_EMAIL`    | `admin@monteur.com`       | First-run superuser                     |
 | `ADMIN_BOOTSTRAP_PASSWORD` | `test1234` (dev only)     | Required in production; `test1234` refused |
 | `ADMIN_BOOTSTRAP_NAME`     | `Monteur Admin`           |                                         |
+| `ADMIN_LOGIN_MAX_FAILURES` | `5`                       | Failures before lockout (0 disables)    |
+| `ADMIN_LOGIN_WINDOW`       | `15m`                     | Window in which failures accumulate     |
+| `ADMIN_LOGIN_LOCKOUT`      | `15m`                     | How long a locked subject stays locked  |
+| `ADMIN_2FA_REQUIRED`       | `true` in production      | Force every admin to enrol in TOTP      |
+| `ADMIN_2FA_ISSUER`         | `Monteur admin`           | Label shown in the authenticator app    |
 
 Database settings (`DB_ADDR`, …) are shared with the API.
 
@@ -157,10 +183,12 @@ reachable) and drives it over HTTP like a browser, in ordered phases:
 | Phase            | What it proves                                                                 |
 |------------------|--------------------------------------------------------------------------------|
 | Auth             | login/logout, wrong password, session gating, CSRF on every POST, `next=` open-redirect guard, deactivated admin |
+| Lockout          | 5 failures lock IP + account, correct password refused while locked, expiry, rolling window |
 | CRUD             | for **every registered table**: add via the generated form → listed instantly → change form round-trips untouched (`No fields changed.`) → one column edited → DB + `admin_log` verified; bulk delete with confirmation; read-only tables refuse writes |
 | Changelist       | every sort order, every filter link, search (incl. `%_\` metacharacters), paging edge cases, 404s for bad models/keys, FK labels |
 | Validation       | required fields, bad JSON/UUID/number/date/choice, varchar length, unique/FK/CHECK/numeric-overflow violations shown as form errors, readonly columns ignored, password hashing |
 | InstantRefresh   | a direct SQL update is visible on the next request; add/delete visible immediately; `Cache-Control: no-store` |
+| TwoFactor        | enrol via QR/secret, challenge on next login, wrong/replayed codes, lockout on bad codes, colleague reset from Admins page, mandatory mode redirects to setup |
 | Performance      | seeds 5 000 users, times index/changelist/filter/sort/search/page/change/add (budgets: mean < 250 ms, max < 750 ms) and a 16-way concurrent burst |
 | Cleanup          | deletes every fixture through the portal, children first                        |
 | Isolation        | row count + `md5` checksum of every table equal before and after — the suite touched nothing else |

@@ -24,6 +24,8 @@
         <div class="field">
           {{if .Readonly}}
             <div class="readonly">{{if eq .Widget "json"}}<pre>{{.Value}}</pre>{{else}}{{.Display}}{{end}}</div>
+          {{else if eq .Widget "secret"}}
+            <div class="readonly">{{.Display}}{{if eq .Display "Set"}} &nbsp; <label style="font-weight:400"><input type="checkbox" name="{{.Name}}__clear"> Clear</label>{{end}}</div>
           {{else if eq .Widget "checkbox"}}
             <input type="checkbox" name="{{.Name}}" id="id_{{.Name}}" {{if .Checked}}checked{{end}}>
           {{else if eq .Widget "select"}}

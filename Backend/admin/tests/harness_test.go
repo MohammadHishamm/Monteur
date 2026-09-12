@@ -191,8 +191,13 @@ func (h *harness) login(email, password string) response {
 	}
 	resp := h.postRaw(basePath+"/login/", form, false)
 	if resp.Code == http.StatusFound {
-		// The token rotates on login; pick up the new one from the index.
-		h.csrf = extractCSRF(h.get(basePath + "/").Body)
+		// The token rotates on login; pick up the new one from the index —
+		// or from wherever the index sends us (two-factor verify/setup).
+		page := h.get(basePath + "/")
+		if page.Code == http.StatusFound {
+			page = h.get(page.Location)
+		}
+		h.csrf = extractCSRF(page.Body)
 	}
 	return resp
 }
@@ -297,6 +302,7 @@ func purgeTestData(t *testing.T, db *sql.DB) {
 		`DELETE FROM notifications WHERE title LIKE 'admintest-%' OR user_id IN (SELECT id FROM users WHERE email LIKE 'admintest-%')`,
 		`DELETE FROM users WHERE email LIKE 'admintest-%'`,
 		`DELETE FROM admin_log WHERE admin_email LIKE 'admintest-%'`,
+		`DELETE FROM admin_login_attempts WHERE subject LIKE 'email:admintest-%' OR subject LIKE 'ip:%'`,
 		`DELETE FROM admins WHERE email LIKE 'admintest-%'`,
 	}
 	for _, s := range stmts {

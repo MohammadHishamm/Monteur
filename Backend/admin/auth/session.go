@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/gob"
 	"net/http"
@@ -14,6 +15,8 @@ import (
 
 const (
 	sessionAdminID = "admin_id"
+	sessionOTPOK   = "otp_verified" // second factor passed for this session
+	sessionPending = "pending_totp" // secret being enrolled; cookie is encrypted
 	sessionCSRF    = "csrf_token"
 	csrfField      = "csrfmiddlewaretoken" // same field name as Django, so muscle memory works
 )
@@ -36,9 +39,12 @@ type Sessions struct {
 }
 
 // NewSessions builds a cookie-backed session store. path scopes the cookie
-// to the admin mount point so it is never sent to the public API.
+// to the admin mount point so it is never sent to the public API. The cookie
+// is signed with key and encrypted with a key derived from it, so its
+// contents (admin id, second-factor state) are opaque to the browser.
 func NewSessions(key []byte, name, path string, secure bool, maxAgeSeconds int) *Sessions {
-	cs := sessions.NewCookieStore(key)
+	encKey := sha256.Sum256(append([]byte("monteur-admin-session-enc:"), key...))
+	cs := sessions.NewCookieStore(key, encKey[:])
 	cs.Options = &sessions.Options{
 		Path:     path,
 		MaxAge:   maxAgeSeconds,
@@ -55,12 +61,45 @@ func (s *Sessions) get(r *http.Request) *sessions.Session {
 	return sess
 }
 
-// Login binds the session to an admin and rotates the CSRF token.
+// Login binds the session to an admin after the password check and rotates
+// the CSRF token. The second factor starts unverified.
 func (s *Sessions) Login(w http.ResponseWriter, r *http.Request, adminID uuid.UUID) error {
 	sess := s.get(r)
 	sess.Values[sessionAdminID] = adminID.String()
+	sess.Values[sessionOTPOK] = false
 	sess.Values[sessionCSRF] = newToken()
 	return sess.Save(r, w)
+}
+
+// MarkOTPVerified records that the second factor passed.
+func (s *Sessions) MarkOTPVerified(w http.ResponseWriter, r *http.Request) error {
+	sess := s.get(r)
+	sess.Values[sessionOTPOK] = true
+	return sess.Save(r, w)
+}
+
+// SetPendingTOTP remembers a secret shown on the setup page until the admin
+// proves they scanned it. Lives only in the encrypted cookie.
+func (s *Sessions) SetPendingTOTP(w http.ResponseWriter, r *http.Request, secret string) error {
+	sess := s.get(r)
+	if secret == "" {
+		delete(sess.Values, sessionPending)
+	} else {
+		sess.Values[sessionPending] = secret
+	}
+	return sess.Save(r, w)
+}
+
+// PendingTOTP returns the secret from SetPendingTOTP, or "".
+func (s *Sessions) PendingTOTP(r *http.Request) string {
+	v, _ := s.get(r).Values[sessionPending].(string)
+	return v
+}
+
+// OTPVerified reports whether the second factor passed in this session.
+func (s *Sessions) OTPVerified(r *http.Request) bool {
+	ok, _ := s.get(r).Values[sessionOTPOK].(bool)
+	return ok
 }
 
 // Logout destroys the session.
@@ -140,33 +179,64 @@ func CurrentAdmin(ctx context.Context) *Admin {
 	return a
 }
 
-// RequireLogin redirects anonymous requests to loginPath?next=<url> and
-// attaches the Admin to the context otherwise. A session whose admin was
-// deleted or deactivated is treated as anonymous.
-func RequireLogin(s *Sessions, repo *Repository, loginPath string) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			redirect := func() {
-				http.Redirect(w, r, loginPath+"?next="+url.QueryEscape(r.URL.RequestURI()), http.StatusFound)
-			}
-			id, ok := s.AdminID(r)
-			if !ok {
-				redirect()
-				return
-			}
-			admin, err := repo.FindByID(r.Context(), id)
-			if err != nil {
-				http.Error(w, "internal error", http.StatusInternalServerError)
-				return
-			}
-			if admin == nil || !admin.IsActive {
-				_ = s.Logout(w, r)
-				redirect()
-				return
-			}
-			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), ctxAdmin, admin)))
-		})
-	}
+// Gate is the two-stage access check shared by the middleware below.
+type Gate struct {
+	Sessions  *Sessions
+	Repo      *Repository
+	LoginPath string
+	// SetupPath / VerifyPath are the two-factor pages.
+	SetupPath  string
+	VerifyPath string
+	// RequireTwoFactor forces admins who have not enrolled into setup before
+	// they can reach anything else.
+	RequireTwoFactor bool
+}
+
+func (g Gate) toLogin(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, g.LoginPath+"?next="+url.QueryEscape(r.URL.RequestURI()), http.StatusFound)
+}
+
+// RequirePassword admits sessions that passed the password check and
+// attaches the Admin to the context. It is enough for the two-factor pages
+// and logout; everything else also needs RequireSecondFactor. A session
+// whose admin was deleted or deactivated is treated as anonymous.
+func (g Gate) RequirePassword(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, ok := g.Sessions.AdminID(r)
+		if !ok {
+			g.toLogin(w, r)
+			return
+		}
+		admin, err := g.Repo.FindByID(r.Context(), id)
+		if err != nil {
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+		if admin == nil || !admin.IsActive {
+			_ = g.Sessions.Logout(w, r)
+			g.toLogin(w, r)
+			return
+		}
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), ctxAdmin, admin)))
+	})
+}
+
+// RequireSecondFactor runs after RequirePassword: an enrolled admin must
+// have verified a code this session; when two-factor is mandatory an
+// unenrolled admin is sent to setup first.
+func (g Gate) RequireSecondFactor(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		admin := CurrentAdmin(r.Context())
+		next2 := "?next=" + url.QueryEscape(r.URL.RequestURI())
+		switch {
+		case admin.TOTPEnrolled() && !g.Sessions.OTPVerified(r):
+			http.Redirect(w, r, g.VerifyPath+next2, http.StatusFound)
+		case g.RequireTwoFactor && !admin.TOTPEnrolled():
+			http.Redirect(w, r, g.SetupPath+next2, http.StatusFound)
+		default:
+			next.ServeHTTP(w, r)
+		}
+	})
 }
 
 // RequireCSRF rejects state-changing requests whose form token does not

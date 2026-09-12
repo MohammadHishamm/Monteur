@@ -51,6 +51,10 @@ type ModelAdmin struct {
 	// value is bcrypt-hashed before being written, an empty one keeps the
 	// stored hash. This is how the portal edits password_hash columns safely.
 	PasswordFields []string
+	// SecretFields are never displayed or edited; the form only shows whether
+	// a value is set and offers a "Clear" checkbox that writes NULL. Used for
+	// two-factor secrets so a colleague can reset a lost device.
+	SecretFields []string
 
 	// ReprField is the column used as the human-readable label of a row
 	// (Django's __str__). Defaults to the first text column, else the PK.
@@ -110,6 +114,9 @@ func (m *Model) IsReadonly(col string) bool { return contains(m.Admin.ReadonlyFi
 
 // IsPassword reports whether the column is a hashed password.
 func (m *Model) IsPassword(col string) bool { return contains(m.Admin.PasswordFields, col) }
+
+// IsSecret reports whether the column is write-only "clear or keep".
+func (m *Model) IsSecret(col string) bool { return contains(m.Admin.SecretFields, col) }
 
 // IsLinkColumn reports whether a changelist column links to the change page.
 func (m *Model) IsLinkColumn(col string) bool { return contains(m.Admin.ListDisplayLinks, col) }
@@ -226,6 +233,7 @@ func validate(t *schema.Table, a *ModelAdmin) error {
 		"Exclude":        a.Exclude,
 		"ReadonlyFields": a.ReadonlyFields,
 		"PasswordFields": a.PasswordFields,
+		"SecretFields":   a.SecretFields,
 	}
 	for label, cols := range lists {
 		for _, c := range cols {

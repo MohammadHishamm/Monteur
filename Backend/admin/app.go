@@ -74,7 +74,18 @@ func Build(ctx context.Context, cfg Config, db *sql.DB) (*Portal, error) {
 	sessions := auth.NewSessions([]byte(cfg.SessionKey), cfg.SessionName, cfg.BasePath, cfg.SecureCookies, cfg.SessionMaxAge)
 	logs := service.NewLogService(db)
 	models := service.NewModelService(repository.New(db), s, logs)
-	h := handler.New(s, models, logs, auth.NewAuthenticator(admins), admins, sessions, renderer)
+	throttle := auth.NewThrottle(db, cfg.LoginMaxFailures, cfg.LoginWindow, cfg.LoginLockout)
+	h := handler.New(handler.Deps{
+		Site:      s,
+		Models:    models,
+		Logs:      logs,
+		Auth:      auth.NewAuthenticator(admins),
+		Admins:    admins,
+		Sessions:  sessions,
+		Throttle:  throttle,
+		Renderer:  renderer,
+		TwoFactor: handler.TwoFactorConfig{Required: cfg.TwoFactorRequired, Issuer: cfg.TwoFactorIssuer},
+	})
 
 	mux := chi.NewMux()
 	mux.Use(middleware.RequestID)

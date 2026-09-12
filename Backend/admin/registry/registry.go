@@ -27,10 +27,14 @@ type registration struct {
 var registrations = []registration{
 	{"admins", site.ModelAdmin{
 		VerboseName:  "admin",
-		ListDisplay:  []string{"email", "full_name", "is_active", "last_login_at", "created_at"},
+		ListDisplay:  []string{"email", "full_name", "is_active", "totp_secret", "last_login_at", "created_at"},
 		SearchFields: []string{"email", "full_name"},
 		ListFilter:   []string{"is_active", "created_at"},
 		Ordering:     []string{"email"},
+		// Clearing totp_secret resets a colleague's two-factor enrolment
+		// (lost phone); the secret itself is never shown.
+		SecretFields:   []string{"totp_secret"},
+		ReadonlyFields: []string{"id", "created_at", "updated_at", "last_login_at", "totp_confirmed_at", "totp_last_used_step"},
 	}},
 	{"users", site.ModelAdmin{
 		ListDisplay:  []string{"email", "full_name", "user_type", "tier", "country", "is_active", "is_banned", "verification_status", "created_at"},

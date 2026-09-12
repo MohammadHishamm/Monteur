@@ -6,6 +6,7 @@ package admin
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/OmarHosny18/APP-frontend/common"
 )
@@ -42,6 +43,18 @@ type Config struct {
 	BootstrapEmail    string
 	BootstrapPassword string
 	BootstrapName     string
+
+	// Login lockout (django-axes semantics): LoginMaxFailures failures within
+	// LoginWindow lock the IP and the account for LoginLockout. 0 disables.
+	LoginMaxFailures int
+	LoginWindow      time.Duration
+	LoginLockout     time.Duration
+
+	// Two-factor authentication. TwoFactorRequired forces every admin to
+	// enrol before using the portal; TwoFactorIssuer labels the entry in the
+	// authenticator app.
+	TwoFactorRequired bool
+	TwoFactorIssuer   string
 }
 
 // LoadConfig reads the environment. It must be called after godotenv has
@@ -64,7 +77,19 @@ func LoadConfig(isProd bool, sessionKeyFallback string) Config {
 		BootstrapEmail:    common.GetEnvString("ADMIN_BOOTSTRAP_EMAIL", "admin@monteur.com"),
 		BootstrapPassword: common.GetEnvString("ADMIN_BOOTSTRAP_PASSWORD", defaultPassword),
 		BootstrapName:     common.GetEnvString("ADMIN_BOOTSTRAP_NAME", "Monteur Admin"),
+		LoginMaxFailures:  common.GetEnvInt("ADMIN_LOGIN_MAX_FAILURES", 5),
+		LoginWindow:       envDuration("ADMIN_LOGIN_WINDOW", 15*time.Minute),
+		LoginLockout:      envDuration("ADMIN_LOGIN_LOCKOUT", 15*time.Minute),
+		TwoFactorRequired: common.GetEnvBool("ADMIN_2FA_REQUIRED", isProd),
+		TwoFactorIssuer:   common.GetEnvString("ADMIN_2FA_ISSUER", "Monteur admin"),
 	}
+}
+
+func envDuration(key string, fallback time.Duration) time.Duration {
+	if d, err := time.ParseDuration(common.GetEnvString(key, "")); err == nil && d > 0 {
+		return d
+	}
+	return fallback
 }
 
 // Validate rejects configurations that would leave the portal insecure.

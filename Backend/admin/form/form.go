@@ -31,7 +31,11 @@ const (
 	WidgetPassword Widget = "password"
 	WidgetJSON     Widget = "json"
 	WidgetArray    Widget = "array"
+	WidgetSecret   Widget = "secret"
 )
+
+// ClearSuffix is appended to a secret field's name for its "Clear" checkbox.
+const ClearSuffix = "__clear"
 
 // WidgetFor picks the control for a column.
 func WidgetFor(c schema.Column, isPassword bool) Widget {

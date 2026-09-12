@@ -217,6 +217,9 @@ func (h *Handler) changelistView(m *site.Model, query url.Values, params service
 		for _, col := range m.Admin.ListDisplay {
 			c := m.Table.Column(col)
 			cell := clCell{Text: form.Display(*c, row[col]), Title: repository.Stringify(row[col])}
+			if m.IsSecret(col) {
+				cell.Text, cell.Title = secretDisplay(row[col]), ""
+			}
 			switch {
 			case m.IsLinkColumn(col):
 				cell.Href = withPreserved(m.ObjectURL(rv.Key), preserved)

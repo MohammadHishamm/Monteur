@@ -108,6 +108,9 @@ func (f *fixtures) addForm(m *site.Model) url.Values {
 			}
 			continue
 		}
+		if m.IsSecret(c.Name) {
+			continue
+		}
 		if m.IsPassword(c.Name) {
 			form.Set(c.Name, "Sup3r-secret!")
 			continue
@@ -193,7 +196,7 @@ func textFor(c schema.Column) string {
 func changeableColumn(m *site.Model) *schema.Column {
 	for _, c := range m.FormColumns() {
 		if c.Kind != schema.KindText || len(c.Choices) > 0 || c.FK != nil || c.IsPrimary ||
-			m.IsReadonly(c.Name) || m.IsPassword(c.Name) || skipColumns[c.Name] ||
+			m.IsReadonly(c.Name) || m.IsPassword(c.Name) || m.IsSecret(c.Name) || skipColumns[c.Name] ||
 			c.Name == "email" || (c.MaxLength > 0 && c.MaxLength < 32) {
 			continue
 		}
