@@ -1,6 +1,13 @@
 import type { BudgetType } from "./job"
 
-export type ProposalStatus = "new" | "shortlisted" | "hired" | "declined"
+/** Values from the proposals table CHECK constraint. */
+export type ProposalStatus =
+  | "pending"
+  | "viewed"
+  | "shortlisted"
+  | "accepted"
+  | "declined"
+  | "withdrawn"
 
 export interface Proposal {
   id: string

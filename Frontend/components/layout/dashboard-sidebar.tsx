@@ -43,8 +43,8 @@ interface DashboardSidebarProps {
 
 const clientNavItems = [
   { title: "لوحة التحكم", href: "/client", icon: LayoutDashboard },
-  { title: "نشر وظيفة", href: "/jobs/new", icon: PlusCircle, highlight: true },
-  { title: "وظائفي", href: "/video-jobs", icon: FolderOpen },
+  { title: "نشر وظيفة", href: "/post-job", icon: PlusCircle, highlight: true },
+  { title: "وظائفي", href: "/projects", icon: FolderOpen },
   { title: "تصفّح المونتيرين", href: "/video-editors", icon: Users },
   { title: "الرسائل", href: "/messages", icon: MessageSquare },
   { title: "المدفوعات", href: "/payments", icon: CreditCard },

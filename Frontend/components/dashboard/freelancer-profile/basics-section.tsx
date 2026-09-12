@@ -122,7 +122,7 @@ export function BasicsSection({
       >
         <div>
           <p className="text-sm font-semibold" style={{ color: P.text }}>
-            متاح لاستقبال بريفات جديدة
+            متاح لاستقبال وظائف جديدة
           </p>
           <p className="mt-0.5 text-xs" style={{ color: P.muted }}>
             عند التفعيل يظهر بجانب اسمك مؤشّر «متاح» أخضر.

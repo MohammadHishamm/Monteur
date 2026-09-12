@@ -76,7 +76,7 @@ export function ProposalPanel({
             </div>
             <div>
               <h2 className="text-xl font-bold tracking-tight" style={{ color: P.text }}>
-                قدّمت عرضاً على هذا البريف
+                قدّمت عرضاً على هذه الوظيفة
               </h2>
               <p className="mt-1.5 text-sm" style={{ color: P.muted }}>
                 لا يمكنك تقديم أكثر من عرض واحد. تابع حالته من لوحة التحكم.
@@ -118,7 +118,7 @@ export function ProposalPanel({
                 هل أنت مونتير؟
               </h2>
               <p className="mt-1 text-sm" style={{ color: P.muted }}>
-                سجّل دخولك بحساب المونتير لتقديم عرضك على هذا البريف.
+                سجّل دخولك بحساب المونتير لتقديم عرضك على هذه الوظيفة.
               </p>
             </div>
           </div>
@@ -156,7 +156,7 @@ export function ProposalPanel({
           <div>
             <h2 className="text-base font-bold" style={{ color: P.text }}>أنت مسجّل كعميل</h2>
             <p className="mt-0.5 text-sm" style={{ color: P.muted }}>
-              تقديم العروض متاح للمونتيرين فقط. يمكنك نشر بريفاتك الخاصة من
+              تقديم العروض متاح للمونتيرين فقط. يمكنك نشر وظائفك الخاصة من
               {" "}<Link href="/post-job" className="underline underline-offset-2" style={{ color: P.primary }}>هنا</Link>.
             </p>
           </div>
@@ -209,7 +209,7 @@ export function ProposalPanel({
         >
           <div>
             <h2 className="text-xl font-bold tracking-tight" style={{ color: P.text }}>
-              مهتمّ بهذا البريف؟
+              مهتمّ بهذه الوظيفة؟
             </h2>
             <p className="mt-1.5 text-sm" style={{ color: P.muted }}>
               قدّم عرضك الآن — تكتبه لك المطابقة الذكية في ثوانٍ.
@@ -249,7 +249,7 @@ export function ProposalPanel({
               className="group inline-flex h-12 items-center justify-center gap-2 rounded-full px-7 text-sm font-semibold text-white transition-all hover:opacity-90"
               style={{ background: P.primary }}
             >
-              تصفّح بريفات أخرى
+              تصفّح وظائف أخرى
               <ArrowLeft className="size-4 transition-transform group-hover:-translate-x-1" />
             </Link>
           </div>
@@ -281,7 +281,7 @@ export function ProposalPanel({
                     مساعد كتابة العروض
                   </p>
                   <p className="text-xs" style={{ color: P.muted }}>
-                    يكتب رسالة مخصّصة تبرز أدواتك وتناسب هذا البريف.
+                    يكتب رسالة مخصّصة تبرز أدواتك وتناسب هذه الوظيفة.
                   </p>
                 </div>
               </div>

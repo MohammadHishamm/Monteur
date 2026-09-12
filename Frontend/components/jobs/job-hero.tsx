@@ -17,7 +17,7 @@ export function JobHero({ job: j }: { job: Job }) {
               style={{ background: `${P.primary}14`, color: P.primaryText, border: `1px solid ${P.primary}33` }}
             >
               <Zap className="size-3.5" />
-              بريف عاجل
+              وظيفة عاجلة
             </span>
           )}
         </div>

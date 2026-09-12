@@ -18,11 +18,11 @@ export function PublishedScreen({ form }: { form: PostJobForm }) {
           className="tracking-tight mt-8 text-3xl font-bold sm:text-4xl"
           style={{ color: P.text }}
         >
-          تم نشر <span style={{ color: P.primaryText }}>بريفك</span> بنجاح
+          تم نشر <span style={{ color: P.primaryText }}>وظيفتك</span> بنجاح
         </h1>
         <p className="mt-4 max-w-md text-base leading-relaxed" style={{ color: P.muted }}>
           يعمل المطابقة الذكية الآن على ترشيح أفضل المونتيرين المطابقين
-          لبريف «{title.trim()}». ستصلك أفضل ٣ مطابقات خلال دقائق.
+          لوظيفة «{title.trim()}». ستصلك أفضل ٣ مطابقات خلال دقائق.
         </p>
 
         <div
@@ -58,7 +58,7 @@ export function PublishedScreen({ form }: { form: PostJobForm }) {
             className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-white px-7 text-sm font-semibold transition-all hover:-translate-y-0.5"
             style={{ border: `1px solid ${P.border}`, color: P.text }}
           >
-            نشر بريف آخر
+            نشر وظيفة أخرى
           </Link>
         </div>
       </div>

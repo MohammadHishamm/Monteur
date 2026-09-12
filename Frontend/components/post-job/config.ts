@@ -33,7 +33,7 @@ export const SUGGESTED_SKILLS: Record<Category, string[]> = {
 export function tierHintForBudget(amount: number, type: BudgetType): string | null {
   if (!amount) return null;
   const monthly = type === "hourly" ? amount * 160 : amount;
-  if (monthly < 1000) return "بريف بميزانية اقتصادية — سنرشّح لك مونتيرين من فئتي البرونزي والفضي.";
+  if (monthly < 1000) return "وظيفة بميزانية اقتصادية — سنرشّح لك مونتيرين من فئتي البرونزي والفضي.";
   if (monthly < 5000) return "ميزانية متوسطة — سنرشّح لك مونتيرين من فئتي الفضي والذهبي.";
-  return "بريف مميّز — سنرشّح لك نخبة المونتيرين من فئتي الذهبي والبلاتيني.";
+  return "وظيفة مميّزة — سنرشّح لك نخبة المونتيرين من فئتي الذهبي والبلاتيني.";
 }

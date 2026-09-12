@@ -84,7 +84,7 @@ export default function JobDetailPage() {
         <div className="mx-auto grid max-w-6xl gap-x-12 px-5 lg:grid-cols-[1fr_320px] lg:px-8">
           {/* ── MAIN COLUMN ── */}
           <div className="min-w-0">
-            <Block label="وصف البريف">
+            <Block label="وصف الوظيفة">
               <p className="max-w-2xl whitespace-pre-line text-base leading-loose" style={{ color: P.muted }}>
                 {j.description}
               </p>

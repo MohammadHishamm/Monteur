@@ -369,11 +369,11 @@ function WorkTabs({
           })}
         </div>
         <Link
-          href="/jobs"
+          href={tab === "proposals" ? "/proposals" : "/projects"}
           className="mb-2.5 inline-flex shrink-0 items-center gap-1 text-xs font-semibold"
           style={{ color: P.primaryText }}
         >
-          تصفّح الوظائف <ArrowLeft className="size-3.5" />
+          عرض الكل <ArrowLeft className="size-3.5" />
         </Link>
       </div>
 

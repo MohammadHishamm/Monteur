@@ -24,6 +24,7 @@ import {
   FolderOpen,
   Plus,
   Sparkles,
+  UserPen,
   Users,
   X,
 } from "lucide-react";
@@ -31,7 +32,7 @@ import Link from "next/link";
 import React, { useState } from "react";
 
 const PAGE_TITLE = "لوحة التحكم";
-const PAGE_DESC = "نظرة سريعة على البريفات، العروض، والتعاقدات الجارية.";
+const PAGE_DESC = "نظرة سريعة على الوظائف، العروض، والتعاقدات الجارية.";
 
 /** How many proposals a job group shows before "show all". */
 const PROPOSALS_PREVIEW = 3;
@@ -89,7 +90,7 @@ export default function ClientDashboardPage() {
           style={{ background: P.primary }}
         >
           <Plus className="size-3.5" />
-          انشر بريفاً جديداً
+          انشر وظيفة جديدة
         </Link>
       }
     >
@@ -136,8 +137,8 @@ export default function ClientDashboardPage() {
             data.jobs.length === 0 ? (
               <EmptyState
                 icon={<Briefcase className="size-6" />}
-                text="لم تنشر أي بريف حتى الآن"
-                cta={{ label: "انشر بريفاً", href: "/post-job" }}
+                text="لم تنشر أي وظيفة حتى الآن"
+                cta={{ label: "انشر وظيفة", href: "/post-job" }}
               />
             ) : (
               <div className="flex flex-col gap-4">
@@ -179,7 +180,7 @@ export default function ClientDashboardPage() {
               ${arNumber(data.stats.escrowAmount)}
             </p>
             <p className="mt-1.5 text-xs leading-relaxed" style={{ color: P.muted }}>
-              بريفات نشطة {toArabicDigits(data.stats.activeJobs)} · عروض واردة{" "}
+              وظائف نشطة {toArabicDigits(data.stats.activeJobs)} · عروض واردة{" "}
               {toArabicDigits(data.stats.totalProposals)} · تعاقدات {toArabicDigits(data.stats.activeHires)}
             </p>
           </Panel>
@@ -198,12 +199,12 @@ export default function ClientDashboardPage() {
             </div>
             <div className="mt-4 flex flex-col gap-2">
               <Link
-                href="/dashboard/profile"
+                href="/client/profile"
                 className="flex h-9 items-center justify-center gap-2 rounded-lg text-sm font-semibold transition-colors hover:bg-black/5"
                 style={{ border: `1px solid ${P.border}`, color: P.text }}
               >
-                <BadgeCheck className="size-3.5" />
-                عرض ملفي الشخصي
+                <UserPen className="size-3.5" />
+                تعديل ملفي الشخصي
               </Link>
               <Link
                 href="/freelancers"
@@ -236,7 +237,7 @@ type ClientTab = "proposals" | "jobs" | "projects";
 
 const TABS: { id: ClientTab; label: string }[] = [
   { id: "proposals", label: "العروض الواردة" },
-  { id: "jobs",      label: "بريفاتي"        },
+  { id: "jobs",      label: "وظائفي"        },
   { id: "projects",  label: "المشاريع الجارية" },
 ];
 
@@ -350,8 +351,8 @@ function ProposalsByJob({
     return jobs.length === 0 ? (
       <EmptyState
         icon={<FileText className="size-6" />}
-        text="انشر بريفك الأول لتبدأ العروض بالوصول"
-        cta={{ label: "انشر بريفاً", href: "/post-job" }}
+        text="انشر وظيفتك الأولى لتبدأ العروض بالوصول"
+        cta={{ label: "انشر وظيفة", href: "/post-job" }}
       />
     ) : (
       <EmptyState icon={<FileText className="size-6" />} text="لا توجد عروض واردة بعد" />
@@ -451,7 +452,7 @@ function JobProposalsGroup({
         </div>
       ) : (
         <p className="px-5 py-6 text-center text-sm" style={{ color: P.muted }}>
-          لا توجد عروض على هذا البريف بعد.
+          لا توجد عروض على هذه الوظيفة بعد.
         </p>
       )}
       {(hidden > 0 || showAll) && proposals.length > PROPOSALS_PREVIEW && (
@@ -470,7 +471,7 @@ function JobProposalsGroup({
         <div className="border-t px-5 py-4" style={{ borderColor: P.border }}>
           <p className="mb-3 inline-flex items-center gap-1.5 text-xs font-bold" style={{ color: P.text }}>
             <Sparkles className="size-3.5" style={{ color: P.primary }} />
-            مطابقات مقترحة لهذا البريف
+            مطابقات مقترحة لهذه الوظيفة
           </p>
           <div className="grid gap-3 xl:grid-cols-2">
             {matches.map((m) => (

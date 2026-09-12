@@ -100,14 +100,14 @@ export function StepScope({ form }: { form: PostJobForm }) {
             setSummary(e.target.value);
             setGeneratedFalse();
           }}
-          placeholder="جملة واحدة تلخّص البريف وتجذب المونتيرين"
+          placeholder="جملة واحدة تلخّص الوظيفة وتجذب المونتيرين"
           className={inputBase}
           style={inputStyle()}
         />
       </Field>
 
       <Field
-        label="وصف البريف"
+        label="وصف الوظيفة"
         hint={`${toArabicDigits(description.length)} حرف`}
       >
         <textarea
@@ -117,7 +117,7 @@ export function StepScope({ form }: { form: PostJobForm }) {
             setGeneratedFalse();
           }}
           rows={8}
-          placeholder="اشرح هدف البريف، المتطلبات الأساسية، والمخرجات المتوقعة…"
+          placeholder="اشرح هدف الوظيفة، المتطلبات الأساسية، والمخرجات المتوقعة…"
           className="w-full resize-y rounded-xl bg-white p-4 text-sm leading-relaxed outline-none transition-colors focus:ring-2"
           style={inputStyle()}
         />

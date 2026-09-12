@@ -207,7 +207,7 @@ export function DashboardHeader({
         const n = payload.notification as Partial<NavbarNotification & { type?: string }>;
         if (n.type === "new_proposal") {
           triggerIncomingMessageAlert();
-          setProposalToast({ id: Date.now(), title: "عرض جديد على بريفك", href: "/client" });
+          setProposalToast({ id: Date.now(), title: "عرض جديد على وظيفتك", href: "/client" });
           // Immediately refresh the client dashboard so new proposal appears in the list
           void queryClient.invalidateQueries({ queryKey: userKeys.dashboard.client() });
         }

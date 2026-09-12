@@ -126,7 +126,7 @@ export function useClientDashboard() {
       invalidateDashboard();
     } catch (err: unknown) {
       unmark(setClosedJobs, jobId);
-      setActionError(isAxiosStatus(err) ? mapStatus2Message(err.response?.status ?? 400) : "تعذّر إغلاق البريف.");
+      setActionError(isAxiosStatus(err) ? mapStatus2Message(err.response?.status ?? 400) : "تعذّر إغلاق الوظيفة.");
     }
   };
 

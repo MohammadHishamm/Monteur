@@ -105,7 +105,7 @@ export function Conversation({
             className="ms-auto inline-flex shrink-0 items-center gap-1 text-xs font-semibold"
             style={{ color: P.primaryText }}
           >
-            البريف
+            الوظيفة
             <ArrowLeft className="size-3.5" />
           </Link>
         )}
