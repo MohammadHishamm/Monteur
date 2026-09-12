@@ -31,7 +31,7 @@ export default function PostJobPage() {
       <section className="border-b" style={{ background: BG.main, borderColor: P.border }}>
         <div className="mx-auto max-w-3xl px-5 py-16 text-center lg:px-8 lg:py-20">
           <div className="flex flex-col items-center">
-            <SectionLabel>انشر بريف فيديو</SectionLabel>
+            <SectionLabel>انشر وظيفة فيديو</SectionLabel>
             <h1
               className="tracking-tight mt-4 text-3xl font-bold sm:text-4xl lg:text-[2.8rem]"
               style={{ color: P.text }}
@@ -39,7 +39,7 @@ export default function PostJobPage() {
               صِف فيديوك، ودع <span style={{ color: P.primaryText }}>المطابقة الذكية</span> تجد المونتير
             </h1>
             <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed" style={{ color: P.muted }}>
-              أربع خطوات سريعة تفصلك عن أفضل ٣ مونتيرين مطابقين لبريفك — دون
+              أربع خطوات سريعة تفصلك عن أفضل ٣ مونتيرين مطابقين لوظيفتك — دون
               تصفّح عشرات الملفات.
             </p>
           </div>

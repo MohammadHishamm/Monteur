@@ -100,14 +100,19 @@ export interface LanguageSkill {
 
 
 
+/** Body of PUT /me/account — the backend accepts these two fields only. */
 export interface UpdateAccountInput {
-  email?: string
-  user_name?: string
-  first_name?: string | null
-  last_name?: string | null
-  avatar_url?: string | null
-  bio?: string | null
-  social_links?: Record<string, string>
+  full_name: string
+  email: string
+}
+
+/** Client profile fields, saved across two backend endpoints (see useSaveClientProfile). */
+export interface ClientProfileInput {
+  full_name: string
+  email: string
+  company_name: string
+  company_website: string
+  industry: string
 }
 
 export interface ChangePasswordInput {

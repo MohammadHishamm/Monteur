@@ -52,7 +52,7 @@ export function StepBudget({ form }: { form: PostJobForm }) {
       </Field>
 
       <Field
-        label={budgetType === "fixed" ? "نطاق ميزانية البريف" : "نطاق السعر بالساعة"}
+        label={budgetType === "fixed" ? "نطاق ميزانية الوظيفة" : "نطاق السعر بالساعة"}
         hint="بالدولار الأمريكي"
       >
         <div className="flex items-center gap-3">

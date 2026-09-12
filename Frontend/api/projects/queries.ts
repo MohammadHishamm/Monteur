@@ -5,11 +5,16 @@ import type { Project } from "../../types/project"
 import type { ResWithData } from "../../types/response"
 import { projectKeys } from "./keys"
 
-export function getMyProjects({ cookie }: WithCookies) {
+export function getMyProjects({
+  page = 1,
+  limit = 100,
+  cookie,
+}: WithCookies<{ page?: number; limit?: number }>) {
   return queryOptions({
-    queryKey: projectKeys.mine(),
+    queryKey: [...projectKeys.mine(), { page, limit }],
     queryFn: async () => {
       const res = await axios.get<ResWithData<Project[]>>("/me/projects", {
+        params: { page, limit },
         headers: { Cookie: cookie },
       })
       return res.data

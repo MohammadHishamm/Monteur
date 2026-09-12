@@ -88,7 +88,7 @@ export function MatchCard({
           <button
             type="button"
             onClick={onHire}
-            className="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-xl text-sm font-semibold transition-opacity hover:opacity-90"
+            className="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-lg text-sm font-semibold transition-opacity hover:opacity-90"
             style={{ background: P.primary, color: "#fff" }}
           >
             <Sparkles className="size-4" />
@@ -96,7 +96,7 @@ export function MatchCard({
           </button>
           <Link
             href={`/freelancers/${f.id}`}
-            className="inline-flex h-10 items-center justify-center rounded-xl px-3 text-xs font-semibold transition-colors hover:bg-black/5"
+            className="inline-flex h-10 items-center justify-center rounded-lg px-3 text-xs font-semibold transition-colors hover:bg-black/5"
             style={{ border: `1px solid ${P.border}`, color: P.text }}
           >
             الملف

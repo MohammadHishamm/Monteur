@@ -12,7 +12,7 @@ export function formatJobBudget(job: Job): string {
 }
 
 export function jobBudgetLabel(job: Job): string {
-  return job.budget_type === "fixed" ? "ميزانية البريف" : "السعر بالساعة";
+  return job.budget_type === "fixed" ? "ميزانية الوظيفة" : "السعر بالساعة";
 }
 
 export function experienceLabel(exp: Job["experience"]): string {

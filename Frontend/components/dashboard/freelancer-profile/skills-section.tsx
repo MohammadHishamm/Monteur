@@ -15,7 +15,7 @@ export function SkillsSection({
     <Panel
       id="skills"
       title="الأدوات"
-      desc="أضف برامج وأدوات المونتاج التي تتقنها — تُستخدم في مطابقتك مع البريفات."
+      desc="أضف برامج وأدوات المونتاج التي تتقنها — تُستخدم في مطابقتك مع الوظائف."
     >
       <ChipInput
         items={profile.skills}

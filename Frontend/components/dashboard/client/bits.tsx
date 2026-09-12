@@ -4,47 +4,6 @@ import { BG, P } from "@/lib/design-tokens";
 import Link from "next/link";
 import React, { useEffect, useRef, useState } from "react";
 
-export function Section({
-  title,
-  action,
-  children,
-}: {
-  title: string;
-  action?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <div
-        className="mb-3 flex items-center justify-between gap-3 border-b pb-3"
-        style={{ borderColor: P.border }}
-      >
-        <h2 className="font-bold" style={{ color: P.text }}>{title}</h2>
-        {action}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-export function MiniStat({
-  icon, label, value, color,
-}: {
-  icon: React.ReactNode; label: string; value: string; color: string;
-}) {
-  return (
-    <div className="bg-white px-4 py-4">
-      <div className="flex items-center gap-1.5" style={{ color }}>
-        {icon}
-        <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: P.muted }}>
-          {label}
-        </span>
-      </div>
-      <p className="mt-2 font-tech text-xl font-bold tabular-nums" style={{ color: P.text }}>{value}</p>
-    </div>
-  );
-}
-
 export function EmptyState({
   icon, text, cta,
 }: {
@@ -117,34 +76,6 @@ export function ClampedText({ text }: { text: string }) {
           {expanded ? "عرض أقل" : "عرض العرض كامل"}
         </button>
       )}
-    </div>
-  );
-}
-
-export function DashboardSkeleton() {
-  return (
-    <div className="animate-pulse">
-      <div className="mb-8 space-y-3">
-        <div className="h-4 w-24" style={{ background: P.subtle }} />
-        <div className="h-9 w-64" style={{ background: P.subtle }} />
-      </div>
-      <div
-        className="grid grid-cols-2 gap-px lg:grid-cols-4"
-        style={{ background: P.border, border: `1px solid ${P.border}` }}
-      >
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-28" style={{ background: BG.main }} />
-        ))}
-      </div>
-      <div className="mt-12 space-y-4">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div
-            key={i}
-            className="h-28"
-            style={{ background: BG.main, border: `1px solid ${P.border}` }}
-          />
-        ))}
-      </div>
     </div>
   );
 }

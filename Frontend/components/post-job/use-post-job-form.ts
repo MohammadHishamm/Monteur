@@ -80,7 +80,7 @@ export function usePostJobForm() {
       setDescription(
         `بناءً على فكرتك: «${idea.trim()}»\n\n` +
           `نبحث عن مونتير محترف لتنفيذ «${headline}» ضمن مجال ${catLabel}. ` +
-          `يشمل البريف تحليل المتطلبات بدقة، ووضع خطة عمل واضحة بمراحل تسليم محدّدة، ` +
+          `تشمل الوظيفة تحليل المتطلبات بدقة، ووضع خطة عمل واضحة بمراحل تسليم محدّدة، ` +
           `وتنفيذاً احترافياً يلتزم بأفضل الممارسات، مع مراجعات وتعديلات حتى الوصول ` +
           `للنتيجة المطلوبة تماماً.`,
       );
@@ -145,7 +145,7 @@ export function usePostJobForm() {
       });
       setPublished(true);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "فشل نشر البريف";
+      const msg = err instanceof Error ? err.message : "فشل نشر الوظيفة";
       setPublishError(msg);
     } finally {
       setPublishing(false);

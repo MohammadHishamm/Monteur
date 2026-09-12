@@ -40,13 +40,14 @@ export function DashboardLayout({
           userRole={userRole}
           user={user}
           onMenuClick={() => setSidebarOpen(true)}
+          persistentSidebar
         />
       </div>
 
-      {/* ── Fixed sidebar — pinned below navbar ── */}
+      {/* ── Fixed sidebar — pinned below navbar; always visible on lg+, drawer below ── */}
       <aside
         className={[
-          "fixed top-16 bottom-0 right-0 z-40 w-65 border-l border-border bg-sidebar transition-transform duration-200 ease-in-out",
+          "fixed top-16 bottom-0 right-0 z-40 w-65 border-l border-border bg-sidebar transition-transform duration-200 ease-in-out lg:translate-x-0",
           sidebarOpen ? "translate-x-0" : "translate-x-full",
         ].join(" ")}
       >
@@ -54,19 +55,20 @@ export function DashboardLayout({
           userRole={userRole}
           user={user}
           onClose={() => setSidebarOpen(false)}
+          persistent
         />
       </aside>
 
-      {/* ── Sidebar overlay ── */}
+      {/* ── Sidebar overlay (drawer mode only) ── */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black/40"
+          className="fixed inset-0 z-30 bg-black/40 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      {/* ── Main content — offset top by navbar height ── */}
-      <div className="flex min-h-screen flex-col pt-16">
+      {/* ── Main content — offset top by navbar height, right by sidebar width on lg+ ── */}
+      <div className="flex min-h-screen flex-col pt-16 lg:pr-65">
         <main className="flex-1">
           {(pageTitle || pageDescription) && (
             <div className="border-b border-border">

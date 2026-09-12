@@ -7,6 +7,7 @@ import {
     Bell,
     Briefcase,
     CheckCircle2,
+    Clapperboard,
     CreditCard,
     DollarSign,
     FileText,
@@ -36,12 +37,14 @@ interface DashboardSidebarProps {
     verified: boolean;
   };
   onClose?: () => void;
+  /** Always visible on lg+ screens — hides the close button there. */
+  persistent?: boolean;
 }
 
 const clientNavItems = [
   { title: "لوحة التحكم", href: "/client", icon: LayoutDashboard },
-  { title: "نشر وظيفة", href: "/jobs/new", icon: PlusCircle, highlight: true },
-  { title: "وظائفي", href: "/video-jobs", icon: FolderOpen },
+  { title: "نشر وظيفة", href: "/post-job", icon: PlusCircle, highlight: true },
+  { title: "وظائفي", href: "/projects", icon: FolderOpen },
   { title: "تصفّح المونتيرين", href: "/video-editors", icon: Users },
   { title: "الرسائل", href: "/messages", icon: MessageSquare },
   { title: "المدفوعات", href: "/payments", icon: CreditCard },
@@ -55,6 +58,7 @@ const freelancerNavItems = [
   { title: "المشاريع النشطة", href: "/projects", icon: Briefcase },
   { title: "الرسائل", href: "/messages", icon: MessageSquare },
   { title: "الأرباح", href: "/payments", icon: DollarSign },
+  { title: "أعمالي", href: "/freelancer/portfolio", icon: Clapperboard },
   { title: "ملفي الشخصي", href: "/freelancer/profile", icon: User },
 ];
 
@@ -64,7 +68,7 @@ const commonNavItems = [
   { title: "الإعدادات", href: "/settings", icon: Settings },
 ];
 
-export function DashboardSidebar({ userRole, user, onClose }: DashboardSidebarProps) {
+export function DashboardSidebar({ userRole, user, onClose, persistent = false }: DashboardSidebarProps) {
   const pathname = usePathname();
   const navItems = userRole === "client" ? clientNavItems : freelancerNavItems;
 
@@ -112,7 +116,12 @@ export function DashboardSidebar({ userRole, user, onClose }: DashboardSidebarPr
   return (
     <div className="flex h-full flex-col">
       {/* Close button header */}
-      <div className="border-b border-border px-3 py-3 flex items-center justify-end">
+      <div
+        className={cn(
+          "border-b border-border px-3 py-3 flex items-center justify-end",
+          persistent && "lg:hidden"
+        )}
+      >
         <button
           onClick={onClose}
           className="inline-flex size-9 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"

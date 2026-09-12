@@ -39,7 +39,7 @@ const BUDGET_TYPES: { value: BudgetType; label: string }[] = [
 ];
 
 const STATS = [
-  { value: "+٢٤٠٠", label: "بريف مفتوح", color: P.primaryText },
+  { value: "+٢٤٠٠", label: "وظيفة مفتوحة", color: P.primaryText },
   { value: "٩٢٪", label: "عملاء موثّقون", color: P.green },
   { value: "١٨", label: "ساعة لأول عرض", color: P.primaryText },
 ];
@@ -185,10 +185,10 @@ export default function BrowseJobsPage() {
               className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl lg:text-[2.8rem]"
               style={{ color: P.text }}
             >
-              اعثر على <span style={{ color: P.primaryText }}>بريفك</span> التالي
+              اعثر على <span style={{ color: P.primaryText }}>وظيفتك</span> التالية
             </h1>
             <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed" style={{ color: P.muted }}>
-              تصفّح بريفات فيديو حقيقية من عملاء موثّقين في المنطقة العربية،
+              تصفّح وظائف فيديو حقيقية من عملاء موثّقين في المنطقة العربية،
               وقدّم عرضك على ما يناسب أدواتك — بمساعدة المطابقة الذكية.
             </p>
 
@@ -229,7 +229,7 @@ export default function BrowseJobsPage() {
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="ابحث عن بريف (مثال: ريلز، موشن، تلوين…)"
+                  placeholder="ابحث عن وظيفة (مثال: ريلز، موشن، تلوين…)"
                   className="h-11 w-full rounded-xl bg-white ps-10 pe-4 text-sm outline-none transition-colors focus:ring-2"
                   style={{
                     border: `1px solid ${P.border}`,
@@ -277,7 +277,7 @@ export default function BrowseJobsPage() {
                   </button>
                 ) : (
                   <span className="text-xs" style={{ color: P.muted }}>
-                    عرض كل البريفات المفتوحة
+                    عرض كل الوظائف المفتوحة
                   </span>
                 )}
               </div>
@@ -287,7 +287,7 @@ export default function BrowseJobsPage() {
                   <span className="font-tech font-semibold tabular-nums" style={{ color: P.text }}>
                     {toArabicDigits(total)}
                   </span>{" "}
-                  بريف
+                  وظيفة
                 </span>
                 <div className="flex items-center gap-1.5">
                   <span className="hidden text-xs sm:inline" style={{ color: P.muted }}>ترتيب:</span>
@@ -326,7 +326,7 @@ export default function BrowseJobsPage() {
                     className="inline-flex h-12 items-center gap-2 rounded-full bg-white px-7 text-sm font-semibold transition-all hover:-translate-y-0.5 disabled:opacity-60"
                     style={{ border: `1px solid ${P.border}`, color: P.text, boxShadow: "0 2px 10px rgba(15,23,42,0.05)" }}
                   >
-                    {loadingMore ? "جارٍ التحميل…" : "عرض المزيد من البريفات"}
+                    {loadingMore ? "جارٍ التحميل…" : "عرض المزيد من الوظائف"}
                     {!loadingMore && <ChevronDown className="size-4" />}
                   </button>
                 </div>
@@ -338,7 +338,7 @@ export default function BrowseJobsPage() {
                 <Briefcase className="size-6" />
               </div>
               <p className="mt-5 text-lg font-bold tracking-tight" style={{ color: P.text }}>
-                لا توجد بريفات مطابقة
+                لا توجد وظائف مطابقة
               </p>
               <p className="mt-2 max-w-sm text-sm" style={{ color: P.muted }}>
                 جرّب تعديل كلمات البحث أو إزالة بعض الفلاتر للعثور على مزيد من الفرص.
@@ -374,8 +374,8 @@ export default function BrowseJobsPage() {
                 لا تكتب عرضك من الصفر — دع <span style={{ color: P.primaryText }}>المطابقة الذكية</span> تكتبه لك
               </h2>
               <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed" style={{ color: P.muted }}>
-                عند فتح أي بريف، يولّد لك مساعد العروض رسالة مخصّصة تبرز أدواتك
-                وتناسب تفاصيل البريف — جاهزة للإرسال في ثوانٍ.
+                عند فتح أي وظيفة، يولّد لك مساعد العروض رسالة مخصّصة تبرز أدواتك
+                وتناسب تفاصيل الوظيفة — جاهزة للإرسال في ثوانٍ.
               </p>
             </div>
           </div>

@@ -93,11 +93,11 @@ function StatCards({ stats }: { stats: AdminAnalytics }) {
       isText: true,
     },
     {
-      label: "بريفات في المنصة",
+      label: "وظائف في المنصة",
       value: stats.total_jobs,
       icon: Briefcase,
       color: P.muted,
-      sub: "بريف منشور",
+      sub: "وظيفة منشورة",
     },
     {
       label: "مشاريع مكتملة",

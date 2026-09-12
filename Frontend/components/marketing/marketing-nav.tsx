@@ -269,7 +269,7 @@ export function MarketingNav({ mode = "default" }: MarketingNavProps) {
   const unreadCount = notifs.filter((n) => !n.isRead).length;
 
   const browseLink = isFreelancer
-    ? { label: "تصفّح البريفات", href: "/jobs" }
+    ? { label: "تصفّح الوظائف", href: "/jobs" }
     : { label: "تصفّح المونتيرين", href: "/freelancers" };
 
   const navLinks = [browseLink, { label: "كيف يعمل", href: "/how-it-works" }];

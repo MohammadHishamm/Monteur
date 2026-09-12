@@ -1,7 +1,6 @@
 "use client";
 
 import { CATEGORY_LABELS } from "@/components/freelancers/types";
-import { formatBudget } from "@/components/jobs/job-row";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { BG, P } from "@/lib/design-tokens";
 import { arNumber, toArabicDigits } from "@/lib/format";
@@ -10,17 +9,16 @@ import {
   ArrowLeft,
   Briefcase,
   CheckCircle2,
+  ChevronDown,
   Circle,
   Clock,
   ExternalLink,
   FileText,
   Loader2,
   ShieldCheck,
-  Sparkles,
   Star,
   Tag,
   UserPen,
-  Wallet,
 } from "lucide-react";
 import Link from "next/link";
 import React, { useEffect, useRef, useState } from "react";
@@ -37,7 +35,8 @@ interface APIProposal {
   bid: number;
   budget_type: "fixed" | "hourly";
   delivery_time: string;
-  status: "new" | "shortlisted" | "hired" | "declined";
+  // Values from the proposals table CHECK constraint.
+  status: "pending" | "viewed" | "shortlisted" | "accepted" | "declined" | "withdrawn";
   cover_letter: string;
   submitted_at: string;
   color: string;
@@ -89,11 +88,14 @@ interface Dashboard {
   checklist: ChecklistItem[];
 }
 
+// Each status gets its own hue (text colors chosen to stay readable on their light tint).
 const PROP_STATUS: Record<APIProposal["status"], { label: string; color: string }> = {
-  new:         { label: "قيد المراجعة",        color: P.muted    },
-  shortlisted: { label: "في القائمة المختصرة", color: P.primary  },
-  hired:       { label: "مقبول ✓",             color: P.green    },
-  declined:    { label: "غير موفّق",            color: "#ef4444"  },
+  pending:     { label: "قيد المراجعة",        color: "#b45309" }, // amber: waiting
+  viewed:      { label: "تمت المشاهدة",        color: "#1d4ed8" }, // blue: seen by client
+  shortlisted: { label: "في القائمة المختصرة", color: "#6d28d9" }, // violet: moving forward
+  accepted:    { label: "مقبول ✓",             color: P.primaryText }, // emerald: won
+  declined:    { label: "مرفوض",               color: "#dc2626" }, // red: lost
+  withdrawn:   { label: "مسحوب",               color: P.muted   }, // grey: withdrawn by you
 };
 
 /* ══════════════════════════════════════════════════════════════
@@ -136,7 +138,7 @@ export default function FreelancerDashboardPage() {
   const countByStatus = (s: APIProposal["status"]) =>
     data.proposals.filter((p) => p.status === s).length;
   const checklistDone = data.checklist.filter((c) => c.done).length;
-  const newMessages = countByStatus("new");
+  const nextStep = data.checklist.find((c) => !c.done);
 
   return (
     <DashboardLayout
@@ -152,299 +154,123 @@ export default function FreelancerDashboardPage() {
     >
     <div dir="rtl">
 
-      {/* TWO-COLUMN GRID */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_290px]" dir="rtl">
+      {/* TWO-COLUMN GRID — work tabs + wallet column (wallet comes first on mobile) */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_300px]" dir="rtl">
 
-        {/* ═══ MAIN COLUMN ═══ */}
-        <div className="min-w-0 space-y-4">
+        {/* ═══ MAIN COLUMN — work tabs ═══ */}
+        <WorkTabs proposals={data.proposals} projects={data.projects} />
 
-          {/* BALANCE */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <BalanceCard
-              label="الرصيد القابل للسحب"
-              amount={0}
-              sub="الرصيد المعلّق $0.00"
-              highlight
-            />
-            <BalanceCard
-              label="الرصيد الكلي"
-              amount={st.month_earnings}
-              sub="الرصيد المنتهي $0.00"
-            />
-          </div>
+        {/* ═══ WALLET COLUMN ═══ */}
+        <aside className="order-first space-y-4 lg:order-none lg:sticky lg:top-20 lg:self-start">
 
-          {/* PROPOSALS STATS */}
-          <div className="bg-white p-5" style={{ border: `1px solid ${P.border}` }}>
-            <div
-              className="flex flex-wrap items-center justify-between gap-3 border-b pb-4"
-              style={{ borderColor: P.border }}
-            >
-              <div className="flex items-center gap-3">
-                <span
-                  className="flex size-9 shrink-0 items-center justify-center rounded-lg"
-                  style={{ background: `${P.primary}14`, color: P.primary }}
-                >
-                  <FileText className="size-4" />
-                </span>
-                <div>
-                  <p className="font-bold" style={{ color: P.text }}>عروض متاحة</p>
-                  <p className="text-xs" style={{ color: P.muted }}>
-                    لديك{" "}
-                    <span className="font-semibold" style={{ color: P.primaryText }}>
-                      {toArabicDigits(MAX_PROPOSALS - usedSlots)}
-                    </span>{" "}
-                    عرض متاح من أصل {toArabicDigits(MAX_PROPOSALS)}
-                  </p>
-                </div>
-              </div>
-              <Link
-                href="/jobs"
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg px-4 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-                style={{ background: P.primary }}
-              >
-                <Sparkles className="size-3.5" />
-                تصفّح البريفات
-              </Link>
+          {/* WALLET */}
+          <Panel>
+            <p className="text-xs font-semibold" style={{ color: P.muted }}>الرصيد القابل للسحب</p>
+            <p className="mt-2 font-tech text-3xl font-bold tabular-nums" style={{ color: P.green }}>
+              ${arNumber(0)}
+            </p>
+            <p className="mt-1.5 text-xs" style={{ color: P.muted }}>
+              معلّق $0.00 · منتهي $0.00 · الكلي ${arNumber(st.month_earnings)}
+            </p>
+            <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
+              <span className="text-sm" style={{ color: P.muted }}>أرباح الشهر</span>
+              <span className="font-tech text-sm font-bold tabular-nums" style={{ color: P.text }}>
+                ${arNumber(st.month_earnings)}
+              </span>
             </div>
+          </Panel>
 
-            <div
-              className="mt-4 grid grid-cols-2 gap-px sm:grid-cols-4"
-              style={{ background: P.border }}
-            >
-              {[
-                { label: "عروض فاعلة",      value: toArabicDigits(st.active_proposals),          color: P.primary     },
-                { label: "المستخدمة",        value: `${toArabicDigits(usedSlots)}/${toArabicDigits(MAX_PROPOSALS)}`, color: P.muted },
-                { label: "مختصرة",          value: toArabicDigits(countByStatus("shortlisted")), color: P.primaryText },
-                { label: "مقبولة",          value: toArabicDigits(countByStatus("hired")),       color: P.green       },
-              ].map((s) => (
-                <div key={s.label} className="bg-white px-4 py-4">
-                  <p className="text-2xl font-bold tabular-nums" style={{ color: s.color }}>
-                    {s.value}
-                  </p>
-                  <p className="mt-0.5 text-xs" style={{ color: P.muted }}>{s.label}</p>
-                </div>
-              ))}
+          {/* PROPOSAL SLOTS */}
+          <Panel>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-bold" style={{ color: P.text }}>عروض متاحة</p>
+              <span className="font-tech text-sm font-bold tabular-nums" style={{ color: P.primaryText }}>
+                {toArabicDigits(MAX_PROPOSALS - usedSlots)}/{toArabicDigits(MAX_PROPOSALS)}
+              </span>
             </div>
-          </div>
+            <ProgressBar
+              value={(usedSlots / MAX_PROPOSALS) * 100}
+              label={`العروض المستخدمة ${usedSlots} من ${MAX_PROPOSALS}`}
+            />
+            <p className="text-xs leading-relaxed" style={{ color: P.muted }}>
+              قيد المراجعة {toArabicDigits(countByStatus("pending") + countByStatus("viewed"))} · مختصرة {toArabicDigits(countByStatus("shortlisted"))} ·
+              مقبولة {toArabicDigits(countByStatus("accepted"))} · فاعلة {toArabicDigits(st.active_proposals)}
+            </p>
+          </Panel>
 
-          {/* MY PROPOSALS */}
-          <Section
-            title="عروضي المقدّمة"
-            action={
-              data.proposals.length > 0 ? (
-                <Link
-                  href="/jobs"
-                  className="inline-flex items-center gap-1 text-xs font-semibold"
-                  style={{ color: P.primaryText }}
-                >
-                  تصفّح المزيد <ArrowLeft className="size-3.5" />
-                </Link>
-              ) : null
-            }
-          >
-            {data.proposals.length === 0 ? (
-              <EmptyState
-                icon={<FileText className="size-6" />}
-                text="لم تقدّم أي عروض حتى الآن"
-                cta={{ label: "ابحث عن بريف", href: "/jobs" }}
-              />
-            ) : (
-              <div className="space-y-3">
-                {data.proposals.map((p) => (
-                  <ProposalRow key={p.id} proposal={p} />
-                ))}
-              </div>
-            )}
-          </Section>
-
-          {/* ACTIVE PROJECTS */}
-          <Section title="بريفاتي الجارية">
-            {data.projects.length === 0 ? (
-              <EmptyState
-                icon={<Briefcase className="size-6" />}
-                text="لا توجد بريفات جارية حالياً"
-              />
-            ) : (
-              <div className="grid gap-4 sm:grid-cols-2">
-                {data.projects.map((pr) => (
-                  <ProjectCard key={pr.id} project={pr} />
-                ))}
-              </div>
-            )}
-          </Section>
-        </div>
-
-        {/* ═══ SIDEBAR ═══ */}
-        <aside className="space-y-4 lg:sticky lg:top-4 lg:self-start">
-
-          {/* PROFILE CARD */}
-          <div className="bg-white p-5" style={{ border: `1px solid ${P.border}` }}>
-            <div className="flex items-center gap-3">
-              <div
-                className="flex size-14 shrink-0 items-center justify-center rounded-full text-xl font-bold text-white"
-                style={{ background: f.color || P.primary }}
-              >
-                {f.name.charAt(0)}
-              </div>
+          {/* PROFILE + ACCOUNT COMPLETION */}
+          <Panel>
+            <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="truncate font-bold" style={{ color: P.text }}>{f.name}</p>
                 <p className="text-xs" style={{ color: P.muted }}>{f.role || "مونتير فيديو"}</p>
-                <div className="mt-1 flex items-center gap-1">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Star
-                      key={i}
-                      className={`size-3 ${i < Math.floor(st.rating) ? "fill-current" : ""}`}
-                      style={{ color: P.star }}
-                    />
-                  ))}
-                  <span className="text-[11px] font-semibold tabular-nums" style={{ color: P.muted }}>
-                    {st.rating.toFixed(1)}
+              </div>
+              <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold tabular-nums" style={{ color: P.muted }}>
+                <Star className="size-3.5 fill-current" style={{ color: P.star }} />
+                {st.rating.toFixed(1)}
+              </span>
+            </div>
+
+            {data.checklist.length > 0 && (
+              <div className="mt-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold" style={{ color: P.muted }}>إكمال الحساب</span>
+                  <span className="font-tech text-xs font-semibold tabular-nums" style={{ color: P.primaryText }}>
+                    {toArabicDigits(f.profile_complete)}٪
                   </span>
                 </div>
+                <ProgressBar value={f.profile_complete} label="إكمال الحساب" />
+                {nextStep && (
+                  <p className="text-xs" style={{ color: P.muted }}>
+                    التالي: <span className="font-semibold" style={{ color: P.text }}>{nextStep.label}</span>
+                  </p>
+                )}
+                <details className="group mt-2">
+                  <summary
+                    className="inline-flex cursor-pointer list-none items-center gap-1 text-xs font-semibold [&::-webkit-details-marker]:hidden"
+                    style={{ color: P.primaryText }}
+                  >
+                    عرض الخطوات ({toArabicDigits(checklistDone)}/{toArabicDigits(data.checklist.length)})
+                    <ChevronDown className="size-3.5 transition-transform group-open:rotate-180" />
+                  </summary>
+                  <ul className="mt-2 space-y-2">
+                    {data.checklist.map((c) => (
+                      <li key={c.key} className="flex items-center gap-2 text-sm">
+                        {c.done ? (
+                          <CheckCircle2 className="size-4 shrink-0" style={{ color: P.green }} />
+                        ) : (
+                          <Circle className="size-4 shrink-0" style={{ color: P.muted }} />
+                        )}
+                        <span className={c.done ? "line-through" : ""} style={{ color: c.done ? P.muted : P.text }}>
+                          {c.label}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
               </div>
-            </div>
-            <div className="mt-4 flex flex-col gap-2">
+            )}
+
+            <div className="mt-4 flex gap-2">
               <Link
                 href="/dashboard/freelancer/profile"
-                className="flex h-9 items-center justify-center gap-2 rounded-lg text-sm font-semibold text-white transition-opacity hover:opacity-90"
-                style={{ background: P.primary }}
+                className="flex h-9 flex-1 items-center justify-center gap-2 rounded-lg text-sm font-semibold transition-colors hover:bg-black/5"
+                style={{ border: `1px solid ${P.border}`, color: P.text }}
               >
                 <UserPen className="size-3.5" />
                 تعديل الملف الشخصي
               </Link>
               <Link
                 href={`/freelancers/${f.id}`}
-                className="flex h-9 items-center justify-center gap-2 rounded-lg text-sm font-semibold transition-colors hover:bg-black/5"
-                style={{ border: `1px solid ${P.border}`, color: P.text }}
+                aria-label="عرض ملفي العام"
+                title="عرض ملفي العام"
+                className="flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-black/5"
+                style={{ border: `1px solid ${P.border}`, color: P.muted }}
               >
                 <ExternalLink className="size-3.5" />
-                عرض ملفي العام
               </Link>
             </div>
-          </div>
-
-          {/* ACCOUNT COMPLETION */}
-          {data.checklist.length > 0 && (
-            <div className="bg-white p-5" style={{ border: `1px solid ${P.border}` }}>
-              <div className="mb-3 flex items-center justify-between">
-                <p className="text-sm font-bold" style={{ color: P.text }}>خطوات إكمال الحساب</p>
-                <span className="font-tech text-xs font-semibold tabular-nums" style={{ color: P.primaryText }}>
-                  {toArabicDigits(f.profile_complete)}٪
-                </span>
-              </div>
-              <div className="mb-4 h-1.5 w-full overflow-hidden rounded-full" style={{ background: P.subtle }}>
-                <div
-                  className="h-full rounded-full transition-all"
-                  style={{ width: `${f.profile_complete}%`, background: P.primary }}
-                />
-              </div>
-              <ul className="space-y-2.5">
-                {data.checklist.map((c) => (
-                  <li key={c.key} className="flex items-center gap-2 text-sm">
-                    {c.done ? (
-                      <CheckCircle2 className="size-4 shrink-0" style={{ color: P.green }} />
-                    ) : (
-                      <Circle className="size-4 shrink-0" style={{ color: P.muted }} />
-                    )}
-                    <span className={c.done ? "line-through" : ""} style={{ color: c.done ? P.muted : P.text }}>
-                      {c.label}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* SIDEBAR COUNTERS */}
-          <div className="bg-white" style={{ border: `1px solid ${P.border}` }}>
-            <div className="border-b px-4 py-3" style={{ borderColor: P.border }}>
-              <p className="text-sm font-bold" style={{ color: P.text }}>ملخص سريع</p>
-            </div>
-            <div className="grid grid-cols-1 divide-y" style={{ borderColor: P.border }}>
-              <div className="flex items-center justify-between px-4 py-3">
-                <span className="text-sm" style={{ color: P.muted }}>الرسائل الجديدة</span>
-                <span className="font-tech text-2xl font-bold tabular-nums" style={{ color: P.text }}>
-                  {toArabicDigits(newMessages)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between px-4 py-3">
-                <span className="text-sm" style={{ color: P.muted }}>أعمالي</span>
-                <span className="font-tech text-2xl font-bold tabular-nums" style={{ color: P.text }}>
-                  {toArabicDigits(st.active_projects)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between px-4 py-3">
-                <span className="text-sm" style={{ color: P.muted }}>خطوات مكتملة</span>
-                <span className="font-tech text-xl font-bold tabular-nums" style={{ color: P.primaryText }}>
-                  {toArabicDigits(checklistDone)}/{toArabicDigits(data.checklist.length)}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* MINI STATS */}
-          <div
-            className="grid grid-cols-2 gap-px"
-            style={{ background: P.border, border: `1px solid ${P.border}` }}
-          >
-            <MiniStat
-              icon={<Briefcase className="size-4" />}
-              label="بريفات جارية"
-              value={toArabicDigits(st.active_projects)}
-              color={P.primary}
-            />
-            <MiniStat
-              icon={<Wallet className="size-4" />}
-              label="أرباح الشهر"
-              value={`$${arNumber(st.month_earnings)}`}
-              color={P.green}
-            />
-          </div>
-
-          {/* RECOMMENDED JOBS */}
-          {data.recommended.length > 0 && (
-            <div className="bg-white p-5" style={{ border: `1px solid ${P.border}` }}>
-              <div className="mb-4 flex items-center gap-2">
-                <Sparkles className="size-4" style={{ color: P.primary }} />
-                <p className="text-sm font-bold" style={{ color: P.text }}>فرص مقترحة</p>
-              </div>
-              <div className="space-y-2">
-                {data.recommended.slice(0, 4).map((job) => (
-                  <RecommendedJobRow key={job.id} job={job} />
-                ))}
-              </div>
-              <Link
-                href="/jobs"
-                className="mt-4 flex h-9 items-center justify-center gap-1.5 rounded-lg text-sm font-semibold transition-colors hover:bg-black/5"
-                style={{ border: `1px solid ${P.border}`, color: P.text }}
-              >
-                عرض الكل <ArrowLeft className="size-3.5" />
-              </Link>
-            </div>
-          )}
-
-          <div className="bg-white" style={{ border: `1px solid ${P.border}` }}>
-            <div className="border-b px-4 py-3" style={{ borderColor: P.border }}>
-              <p className="text-sm font-bold" style={{ color: P.text }}>روابط سريعة</p>
-            </div>
-            <div className="flex flex-col">
-              {[
-                { href: "/dashboard/freelancer/profile", label: "تحديث الملف الشخصي" },
-                { href: "/jobs", label: "تصفح المشاريع" },
-                { href: "/messages", label: "صندوق الرسائل" },
-              ].map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="flex items-center justify-between border-b px-4 py-2.5 text-sm transition-colors last:border-b-0 hover:bg-black/5"
-                  style={{ borderColor: P.border, color: P.text }}
-                >
-                  <span>{item.label}</span>
-                  <ArrowLeft className="size-3.5" />
-                </Link>
-              ))}
-            </div>
-          </div>
+          </Panel>
         </aside>
       </div>
     </div>
@@ -452,66 +278,134 @@ export default function FreelancerDashboardPage() {
   );
 }
 
-/* ════════════ SECTION ════════════ */
-function Section({
-  title,
-  action,
-  children,
-}: {
-  title: string;
-  action?: React.ReactNode;
-  children: React.ReactNode;
-}) {
+/* ════════════ PANEL ════════════ */
+function Panel({ children }: { children: React.ReactNode }) {
   return (
-    <div>
-      <div
-        className="mb-3 flex items-center justify-between gap-3 border-b pb-3"
-        style={{ borderColor: P.border }}
-      >
-        <h2 className="font-bold" style={{ color: P.text }}>{title}</h2>
-        {action}
-      </div>
+    <div className="bg-white p-5" style={{ border: `1px solid ${P.border}` }}>
       {children}
     </div>
   );
 }
 
-/* ════════════ BALANCE CARD ════════════ */
-function BalanceCard({
-  label, amount, sub, highlight,
-}: {
-  label: string; amount: number; sub: string; highlight?: boolean;
-}) {
+/* ════════════ PROGRESS BAR ════════════ */
+function ProgressBar({ value, label }: { value: number; label: string }) {
+  const v = Math.max(0, Math.min(100, value));
   return (
-    <div className="bg-white p-5" style={{ border: `1px solid ${P.border}` }}>
-      <p className="text-xs font-semibold" style={{ color: P.muted }}>{label}</p>
-      <p
-        className="mt-2 font-tech text-3xl font-bold tabular-nums"
-        style={{ color: highlight ? P.green : P.text }}
-      >
-        ${arNumber(amount)}
-      </p>
-      <p className="mt-1.5 text-xs" style={{ color: P.muted }}>{sub}</p>
+    <div
+      role="progressbar"
+      aria-label={label}
+      aria-valuenow={Math.round(v)}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      className="my-2.5 h-1.5 w-full overflow-hidden rounded-full"
+      style={{ background: P.subtle }}
+    >
+      <div className="h-full rounded-full transition-all" style={{ width: `${v}%`, background: P.primary }} />
     </div>
   );
 }
 
-/* ════════════ MINI STAT ════════════ */
-function MiniStat({
-  icon, label, value, color,
+/* ════════════ WORK TABS ════════════ */
+type WorkTab = "projects" | "proposals";
+
+function WorkTabs({
+  proposals,
+  projects,
 }: {
-  icon: React.ReactNode; label: string; value: string; color: string;
+  proposals: APIProposal[];
+  projects: APIProject[];
 }) {
+  const [tab, setTab] = useState<WorkTab>(projects.length > 0 ? "projects" : "proposals");
+
+  const tabs: { id: WorkTab; label: string; count: number }[] = [
+    { id: "projects",  label: "مشاريعي النشطة", count: projects.length  },
+    { id: "proposals", label: "عروضي المقدّمة",  count: proposals.length },
+  ];
+
+  // Only two tabs, so either arrow key moves to the other one.
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    e.preventDefault();
+    const next: WorkTab = tab === "projects" ? "proposals" : "projects";
+    setTab(next);
+    document.getElementById(`work-tab-${next}`)?.focus();
+  };
+
   return (
-    <div className="bg-white px-4 py-4">
-      <div className="flex items-center gap-1.5" style={{ color }}>
-        {icon}
-        <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: P.muted }}>
-          {label}
-        </span>
+    <section className="min-w-0">
+      <div className="mb-4 flex items-end justify-between gap-3 border-b border-border">
+        <div role="tablist" aria-label="أعمالي" className="flex" onKeyDown={onKeyDown}>
+          {tabs.map((t) => {
+            const active = tab === t.id;
+            return (
+              <button
+                key={t.id}
+                id={`work-tab-${t.id}`}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                aria-controls={`work-panel-${t.id}`}
+                tabIndex={active ? 0 : -1}
+                onClick={() => setTab(t.id)}
+                className={`-mb-px inline-flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm transition-colors ${
+                  active
+                    ? "font-bold text-foreground"
+                    : "border-transparent font-medium text-muted-foreground hover:text-foreground"
+                }`}
+                style={active ? { borderColor: P.primary } : undefined}
+              >
+                {t.label}
+                <span
+                  className="font-tech rounded-full px-1.5 text-[11px] font-semibold tabular-nums"
+                  style={{
+                    background: active ? `${P.primary}14` : P.subtle,
+                    color: active ? P.primaryText : P.muted,
+                  }}
+                >
+                  {toArabicDigits(t.count)}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <Link
+          href={tab === "proposals" ? "/proposals" : "/projects"}
+          className="mb-2.5 inline-flex shrink-0 items-center gap-1 text-xs font-semibold"
+          style={{ color: P.primaryText }}
+        >
+          عرض الكل <ArrowLeft className="size-3.5" />
+        </Link>
       </div>
-      <p className="mt-2 font-tech text-xl font-bold tabular-nums" style={{ color: P.text }}>{value}</p>
-    </div>
+
+      <div role="tabpanel" id={`work-panel-${tab}`} aria-labelledby={`work-tab-${tab}`}>
+        {tab === "projects" ? (
+          projects.length === 0 ? (
+            <EmptyState
+              icon={<Briefcase className="size-6" />}
+              text="لا توجد مشاريع نشطة حالياً"
+            />
+          ) : (
+            <div className="space-y-3">
+              {projects.map((pr) => (
+                <ProjectCard key={pr.id} project={pr} />
+              ))}
+            </div>
+          )
+        ) : proposals.length === 0 ? (
+          <EmptyState
+            icon={<FileText className="size-6" />}
+            text="لم تقدّم أي عروض حتى الآن"
+            cta={{ label: "ابحث عن وظيفة", href: "/jobs" }}
+          />
+        ) : (
+          <div className="space-y-3">
+            {proposals.map((p) => (
+              <ProposalRow key={p.id} proposal={p} />
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -572,7 +466,7 @@ function ProposalRow({ proposal: p }: { proposal: APIProposal }) {
           className="inline-flex h-8 items-center gap-1 rounded-lg px-3 text-xs font-semibold transition-colors hover:bg-black/5"
           style={{ border: `1px solid ${P.border}`, color: P.text }}
         >
-          البريف <ArrowLeft className="size-3.5" />
+          عرض الوظيفة <ArrowLeft className="size-3.5" />
         </Link>
       </div>
     </div>
@@ -662,22 +556,6 @@ function ProjectCard({ project: pr }: { project: APIProject }) {
   );
 }
 
-/* ════════════ RECOMMENDED JOB ROW (sidebar) ════════════ */
-function RecommendedJobRow({ job }: { job: APIJob }) {
-  return (
-    <Link
-      href={`/jobs/${job.id}`}
-      className="block rounded-lg p-3 transition-colors hover:bg-black/5"
-      style={{ border: `1px solid ${P.border}` }}
-    >
-      <p className="text-xs font-bold leading-snug" style={{ color: P.text }}>{job.title}</p>
-      <p className="mt-1 text-[11px]" style={{ color: P.muted }}>
-        {formatBudget({ budgetMin: job.budget_min, budgetMax: job.budget_max, budgetType: job.budget_type })}
-      </p>
-    </Link>
-  );
-}
-
 /* ════════════ EMPTY STATE ════════════ */
 function EmptyState({
   icon, text, cta,
@@ -743,16 +621,16 @@ function ClampedText({ text }: { text: string }) {
 /* ════════════ SKELETON ════════════ */
 function Skeleton() {
   return (
-    <div className="animate-pulse space-y-5" dir="rtl">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="h-24 rounded" style={{ background: P.subtle }} />
-        <div className="h-24 rounded" style={{ background: P.subtle }} />
-      </div>
-      <div className="h-32 rounded" style={{ background: P.subtle }} />
+    <div className="grid animate-pulse grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_300px]" dir="rtl">
       <div className="space-y-3">
+        <div className="h-10 rounded" style={{ background: P.subtle }} />
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="h-20 rounded" style={{ background: P.subtle }} />
+          <div key={i} className="h-28 rounded" style={{ background: P.subtle }} />
         ))}
+      </div>
+      <div className="order-first space-y-4 lg:order-none">
+        <div className="h-44 rounded" style={{ background: P.subtle }} />
+        <div className="h-52 rounded" style={{ background: P.subtle }} />
       </div>
     </div>
   );
