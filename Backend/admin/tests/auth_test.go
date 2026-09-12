@@ -71,7 +71,7 @@ func testAuth(t *testing.T, h *harness, _ *fixtures) {
 
 	h.run(t, "index renders every registered model for a signed-in admin", func(t *testing.T) {
 		resp := h.get(basePath + "/")
-		if resp.Code != http.StatusOK || !resp.contains("Site administration") {
+		if resp.Code != http.StatusOK || !resp.contains("Recent actions") {
 			t.Fatalf("got %d", resp.Code)
 		}
 		for _, m := range h.models() {
