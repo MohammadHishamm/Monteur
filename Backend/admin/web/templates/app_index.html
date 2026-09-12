@@ -1,0 +1,20 @@
+{{define "content_class"}}colM dashboard{{end}}
+{{define "content"}}
+<h1>{{.Title}}</h1>
+<div id="content-main">
+  {{range .Data.Apps}}
+  <div class="app-{{.Label}} module">
+    <table>
+      <caption><a href="{{.URL}}/" class="section">{{.Name}}</a></caption>
+      {{range .Models}}
+      <tr class="model-{{.Slug}}">
+        <th scope="row"><a href="{{.URL}}">{{capfirst .Name}}</a></th>
+        <td>{{if .CanAdd}}<a href="{{.AddURL}}" class="addlink">Add</a>{{end}}</td>
+        <td>{{if .CanChange}}<a href="{{.URL}}" class="changelink">Change</a>{{else}}<a href="{{.URL}}" class="viewlink">View</a>{{end}}</td>
+      </tr>
+      {{end}}
+    </table>
+  </div>
+  {{end}}
+</div>
+{{end}}

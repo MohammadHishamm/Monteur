@@ -92,6 +92,31 @@ services:
       disable: true # temporarily disable healthcheck
 
   # -----------------------------
+  # Admin Portal (Django-admin-style UI over the same database)
+  # In production nginx routes api-v1.<domain>/admin/* to this service.
+  # -----------------------------
+  admin:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.admin
+    image: ariatoon-admin:latest
+    container_name: ariatoon-admin
+    env_file: .env
+    environment:
+      - DB_ADDR=postgres://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?sslmode=disable
+    depends_on:
+      db:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    networks:
+      - ariatoon-app-network
+    ports:
+      # Loopback only: reached through nginx on the host, never directly.
+      - "127.0.0.1:8001:8001"
+    restart: unless-stopped
+
+  # -----------------------------
   # Frontend Service
   # -----------------------------
   frontend:
