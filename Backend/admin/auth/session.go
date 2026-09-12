@@ -7,6 +7,7 @@ import (
 	"encoding/gob"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/OmarHosny18/APP-frontend/common"
 	"github.com/google/uuid"
@@ -78,22 +79,28 @@ func (s *Sessions) MarkOTPVerified(w http.ResponseWriter, r *http.Request) error
 	return sess.Save(r, w)
 }
 
-// SetPendingTOTP remembers a secret shown on the setup page until the admin
-// proves they scanned it. Lives only in the encrypted cookie.
-func (s *Sessions) SetPendingTOTP(w http.ResponseWriter, r *http.Request, secret string) error {
+// SetPendingTOTP remembers a secret shown on a setup page, and which admin
+// it is for, until a valid code proves the phone has it. Lives only in the
+// encrypted cookie. An empty secret clears it.
+func (s *Sessions) SetPendingTOTP(w http.ResponseWriter, r *http.Request, forAdmin uuid.UUID, secret string) error {
 	sess := s.get(r)
 	if secret == "" {
 		delete(sess.Values, sessionPending)
 	} else {
-		sess.Values[sessionPending] = secret
+		sess.Values[sessionPending] = forAdmin.String() + ":" + secret
 	}
 	return sess.Save(r, w)
 }
 
-// PendingTOTP returns the secret from SetPendingTOTP, or "".
-func (s *Sessions) PendingTOTP(r *http.Request) string {
+// PendingTOTP returns the secret pending for the given admin, or "" when
+// none is pending or it belongs to a different admin.
+func (s *Sessions) PendingTOTP(r *http.Request, forAdmin uuid.UUID) string {
 	v, _ := s.get(r).Values[sessionPending].(string)
-	return v
+	prefix := forAdmin.String() + ":"
+	if !strings.HasPrefix(v, prefix) {
+		return ""
+	}
+	return strings.TrimPrefix(v, prefix)
 }
 
 // OTPVerified reports whether the second factor passed in this session.

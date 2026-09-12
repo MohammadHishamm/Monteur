@@ -13,8 +13,11 @@ import (
 	"time"
 
 	"github.com/OmarHosny18/APP-frontend/admin/auth"
+	"github.com/OmarHosny18/APP-frontend/admin/service"
 	"github.com/OmarHosny18/APP-frontend/admin/web"
 	"github.com/OmarHosny18/APP-frontend/common"
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	qrcode "github.com/skip2/go-qrcode"
 )
 
@@ -110,7 +113,9 @@ type twoFactorData struct {
 	Error    string
 	Enrolled bool
 	// Setup only:
-	Secret string // grouped for manual entry
+	ForEmail string // the account being enrolled (differs from the viewer in assisted setup)
+	Assisted bool   // enrolling someone else from the Admins page
+	Secret   string // grouped for manual entry
 	// QRData is the data: URI of the QR code PNG. Typed as template.URL so
 	// html/template does not neutralise the data: scheme in the img src.
 	QRData template.URL
@@ -133,7 +138,7 @@ func (h *Handler) TwoFactorSetupForm(w http.ResponseWriter, r *http.Request) {
 		h.serverError(w, r, err)
 		return
 	}
-	if err := h.sessions.SetPendingTOTP(w, r, secret); err != nil {
+	if err := h.sessions.SetPendingTOTP(w, r, admin.ID, secret); err != nil {
 		h.serverError(w, r, err)
 		return
 	}
@@ -144,7 +149,7 @@ func (h *Handler) TwoFactorSetupForm(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) TwoFactorSetup(w http.ResponseWriter, r *http.Request) {
 	admin := auth.CurrentAdmin(r.Context())
 	data := twoFactorData{Next: r.PostFormValue("next")}
-	secret := h.sessions.PendingTOTP(r)
+	secret := h.sessions.PendingTOTP(r, admin.ID)
 	if secret == "" || (admin.TOTPEnrolled() && !h.sessions.OTPVerified(r)) {
 		http.Redirect(w, r, h.site.BasePath+"/two-factor/setup/", http.StatusFound)
 		return
@@ -160,7 +165,7 @@ func (h *Handler) TwoFactorSetup(w http.ResponseWriter, r *http.Request) {
 		h.serverError(w, r, err)
 		return
 	}
-	if err := h.sessions.SetPendingTOTP(w, r, ""); err != nil {
+	if err := h.sessions.SetPendingTOTP(w, r, admin.ID, ""); err != nil {
 		h.serverError(w, r, err)
 		return
 	}
@@ -170,6 +175,80 @@ func (h *Handler) TwoFactorSetup(w http.ResponseWriter, r *http.Request) {
 	}
 	h.sessions.AddFlash(w, r, "success", "Two-factor authentication is now enabled for your account.")
 	http.Redirect(w, r, h.safeNext(data.Next), http.StatusFound)
+}
+
+// ─── Assisted enrolment (from the Admins change page) ────────────────────────
+
+// twoFactorTarget resolves the {adminID} of an assisted-setup URL.
+func (h *Handler) twoFactorTarget(w http.ResponseWriter, r *http.Request) *auth.Admin {
+	id, err := uuid.Parse(chi.URLParam(r, "adminID"))
+	if err != nil {
+		h.notFound(w)
+		return nil
+	}
+	target, err := h.admins.FindByID(r.Context(), id)
+	if err != nil {
+		h.serverError(w, r, err)
+		return nil
+	}
+	if target == nil {
+		h.notFound(w)
+		return nil
+	}
+	return target
+}
+
+// TwoFactorSetupForForm lets a fully authenticated admin enrol a colleague:
+// the colleague scans the QR code on their own phone and reads out the
+// code. The action is audited on the admins model.
+func (h *Handler) TwoFactorSetupForForm(w http.ResponseWriter, r *http.Request) {
+	target := h.twoFactorTarget(w, r)
+	if target == nil {
+		return
+	}
+	secret, err := auth.NewTOTPSecret()
+	if err != nil {
+		h.serverError(w, r, err)
+		return
+	}
+	if err := h.sessions.SetPendingTOTP(w, r, target.ID, secret); err != nil {
+		h.serverError(w, r, err)
+		return
+	}
+	h.showSetup(w, r, http.StatusOK, target, secret, twoFactorData{Assisted: true})
+}
+
+// TwoFactorSetupFor confirms an assisted enrolment.
+func (h *Handler) TwoFactorSetupFor(w http.ResponseWriter, r *http.Request) {
+	target := h.twoFactorTarget(w, r)
+	if target == nil {
+		return
+	}
+	secret := h.sessions.PendingTOTP(r, target.ID)
+	if secret == "" {
+		http.Redirect(w, r, r.URL.Path, http.StatusFound) // start over with a fresh code
+		return
+	}
+	step, ok := auth.VerifyTOTP(secret, r.PostFormValue("code"), time.Now(), 0)
+	if !ok {
+		h.showSetup(w, r, http.StatusBadRequest, target, secret, twoFactorData{Assisted: true, Error: msgBadCode})
+		return
+	}
+	if err := h.admins.EnrolTOTP(r.Context(), target.ID, secret, step); err != nil {
+		h.serverError(w, r, err)
+		return
+	}
+	_ = h.sessions.SetPendingTOTP(w, r, target.ID, "")
+
+	actor := auth.CurrentAdmin(r.Context())
+	if m, ok := h.site.Lookup("app", "admins"); ok {
+		h.logs.RecordAction(r.Context(), actor, service.ActionChange, m, target.ID.String(), target.Email,
+			"Set up two-factor authentication.")
+		h.sessions.AddFlash(w, r, "success", fmt.Sprintf("Two-factor authentication is now enabled for %s.", target.Email))
+		http.Redirect(w, r, m.ObjectURL(target.ID.String()), http.StatusFound)
+		return
+	}
+	http.Redirect(w, r, h.site.BasePath+"/", http.StatusFound)
 }
 
 // TwoFactorVerifyForm asks for the code after a password login.
@@ -236,9 +315,18 @@ func (h *Handler) showSetup(w http.ResponseWriter, r *http.Request, status int, 
 	data.QRData = template.URL("data:image/png;base64," + base64.StdEncoding.EncodeToString(png))
 	data.Issuer = h.twoFactor.Issuer
 	data.Enrolled = admin.TOTPEnrolled()
+	data.ForEmail = admin.Email
 
 	p := h.page(w, r, "Set up two-factor authentication", data)
-	p.Breadcrumbs = []web.Crumb{{Title: "Home", URL: h.site.BasePath + "/"}, {Title: "Two-factor authentication"}}
+	p.Breadcrumbs = []web.Crumb{{Title: "Home", URL: h.site.BasePath + "/"}}
+	if data.Assisted {
+		if m, ok := h.site.Lookup("app", "admins"); ok {
+			p.Breadcrumbs = append(p.Breadcrumbs,
+				web.Crumb{Title: "Admins", URL: m.URL()},
+				web.Crumb{Title: admin.Email, URL: m.ObjectURL(admin.ID.String())})
+		}
+	}
+	p.Breadcrumbs = append(p.Breadcrumbs, web.Crumb{Title: "Two-factor authentication"})
 	h.show(w, r, status, "two_factor_setup", p)
 }
 

@@ -99,6 +99,11 @@ func newHarness(t *testing.T) *harness {
 	cfg.BootstrapEmail = testAdminEmail
 	cfg.BootstrapPassword = testAdminPassword
 	cfg.BootstrapName = "Suite Runner"
+	// Pin the behaviour the phases assume, whatever the developer's .env says.
+	cfg.TwoFactorRequired = false
+	cfg.LoginMaxFailures = 5
+	cfg.LoginWindow = 15 * time.Minute
+	cfg.LoginLockout = 15 * time.Minute
 
 	// Remove leftovers from an earlier aborted run before booting, so the
 	// bootstrap account is created fresh with the expected password.

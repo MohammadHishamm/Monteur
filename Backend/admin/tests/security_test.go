@@ -107,7 +107,7 @@ func currentCode(t *testing.T, secret string, lastUsed int64) (string, int64) {
 // testTwoFactor walks the full TOTP lifecycle: enrol, challenge on the next
 // login, replay rejection, lockout on bad codes, reset by a colleague, and
 // the mandatory mode. It leaves the harness signed in, not enrolled.
-func testTwoFactor(t *testing.T, h *harness, _ *fixtures) {
+func testTwoFactor(t *testing.T, h *harness, fx *fixtures) {
 	setup := basePath + "/two-factor/setup/"
 	verify := basePath + "/two-factor/verify/"
 	var secret string
@@ -255,11 +255,73 @@ func testTwoFactor(t *testing.T, h *harness, _ *fixtures) {
 		}
 	})
 
+	h.run(t, "an admin can enrol a colleague from the Admins page", func(t *testing.T) {
+		admins := h.model("admins")
+		colleague := fx.first("admins") // created in the CRUD phase
+		email := h.queryString(`SELECT email FROM admins WHERE id::text = $1`, colleague)
+		setupFor := basePath + "/two-factor/setup/for/" + colleague + "/"
+
+		page := h.get(admins.ObjectURL(colleague))
+		if !page.contains(`href="`+setupFor+`"`) || !page.contains("Set up two-factor") {
+			t.Fatal("change page should link to assisted setup when no secret is set")
+		}
+
+		form := h.get(setupFor)
+		if form.Code != http.StatusOK || !form.contains("for "+email) || !reQR.MatchString(form.Body) {
+			t.Fatalf("assisted setup page: %d", form.Code)
+		}
+		m := reSecret.FindStringSubmatch(form.Body)
+		if m == nil {
+			t.Fatal("secret not shown")
+		}
+		colleagueSecret := strings.ReplaceAll(m[1], " ", "")
+
+		if resp := h.post(setupFor, url.Values{"code": {"000000"}}); resp.Code != http.StatusBadRequest {
+			t.Fatalf("wrong code: %d", resp.Code)
+		}
+		code, _ := currentCode(t, colleagueSecret, 0)
+		resp := h.post(setupFor, url.Values{"code": {code}})
+		if resp.Code != http.StatusFound || resp.Location != admins.ObjectURL(colleague) {
+			t.Fatalf("enrol colleague: %d %q", resp.Code, resp.Location)
+		}
+		if h.queryString(`SELECT totp_secret FROM admins WHERE id::text = $1`, colleague) != colleagueSecret {
+			t.Fatal("colleague's secret not stored")
+		}
+		if h.queryString(`SELECT totp_confirmed_at::text FROM admins WHERE id::text = $1`, colleague) == "" {
+			t.Fatal("colleague's enrolment not confirmed")
+		}
+		assertLastLog(t, h, admins, 2, "Set up two-factor authentication.")
+
+		after := h.get(admins.ObjectURL(colleague))
+		if !after.contains("Two-factor authentication is now enabled for "+email) ||
+			!after.contains(`name="totp_secret__clear"`) || !after.contains("Replace authenticator") {
+			t.Error("change page should now offer Clear and Replace")
+		}
+		if after.contains(colleagueSecret) {
+			t.Error("secret leaked into the change page")
+		}
+
+		// The runner's own enrolment state is untouched by enrolling someone else.
+		if h.queryString(`SELECT COALESCE(totp_secret, '') FROM admins WHERE email = $1`, testAdminEmail) != "" {
+			t.Error("enrolling a colleague must not enrol the actor")
+		}
+	})
+
+	h.run(t, "assisted setup for an unknown admin is 404", func(t *testing.T) {
+		if h.get(basePath+"/two-factor/setup/for/00000000-0000-0000-0000-000000000000/").Code != http.StatusNotFound {
+			t.Error("unknown id")
+		}
+		if h.get(basePath+"/two-factor/setup/for/nope/").Code != http.StatusNotFound {
+			t.Error("malformed id")
+		}
+	})
+
 	h.run(t, "mandatory mode forces enrolment before anything else", func(t *testing.T) {
 		cfg := admin.LoadConfig(false, "test-session-key")
 		cfg.BasePath = basePath
 		cfg.BootstrapPassword = "" // account already exists
 		cfg.TwoFactorRequired = true
+		cfg.LoginMaxFailures = 5
 		portal, err := admin.Build(h.ctx, cfg, h.db)
 		if err != nil {
 			t.Fatal(err)

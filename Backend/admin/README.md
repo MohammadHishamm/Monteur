@@ -72,9 +72,11 @@ the list state through add/change pages so *Save* returns you where you were.
   on every login is challenged for a code; a code cannot be replayed. With
   `ADMIN_2FA_REQUIRED=true` (the production default) an admin who has not
   enrolled is sent to setup before they can see anything.
-  **Lost device:** another admin opens *Admins → that admin* and ticks
-  *Clear* next to *Totp secret*; the secret is never displayed. The admin
-  then signs in with their password and enrols again.
+  **Lost device / onboarding a colleague:** another admin opens *Admins →
+  that admin*. Next to *Totp secret* they can tick *Clear* (the person
+  re-enrols on their next login) or click *Set up two-factor* to enrol them
+  on the spot — the colleague scans the QR on *their* phone and reads out
+  the code. The secret itself is never displayed; both actions are audited.
 - Sessions are signed **and encrypted** cookies scoped to `/admin`, `HttpOnly`,
   `SameSite=Lax`, `Secure` in production. Every POST is CSRF-checked.
 - All pages are `Cache-Control: no-store` and `X-Frame-Options: DENY`.

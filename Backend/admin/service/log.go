@@ -8,9 +8,12 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/OmarHosny18/APP-frontend/admin/auth"
+	"github.com/OmarHosny18/APP-frontend/admin/site"
+	"github.com/OmarHosny18/APP-frontend/common"
 	"github.com/google/uuid"
 )
 
@@ -76,6 +79,18 @@ func (l *LogService) Record(ctx context.Context, admin *auth.Admin, action Actio
 		return fmt.Errorf("service: record log: %w", err)
 	}
 	return nil
+}
+
+// RecordAction is Record for callers outside the model service; the repr
+// and message are given directly. Failures are logged, not returned.
+func (l *LogService) RecordAction(ctx context.Context, admin *auth.Admin, action Action, m *site.Model, objectID, repr, message string) {
+	if err := l.Record(ctx, admin, action, m.App.Label, m.Name(), objectID, repr, message); err != nil {
+		common.Logger.Error("failed to write admin log",
+			slog.Any("error", err),
+			slog.String("model", m.Name()),
+			slog.String("component", "admin.service"),
+			slog.String("method", "RecordAction"))
+	}
 }
 
 // Recent returns the newest entries by one admin — the "Recent actions"

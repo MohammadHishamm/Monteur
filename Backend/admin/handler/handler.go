@@ -118,6 +118,8 @@ func (h *Handler) Register(r chi.Router) {
 				r.Use(gate.RequirePassword, gate.RequireSecondFactor)
 
 				r.Get("/", h.Index)
+				r.Get("/two-factor/setup/for/{adminID}/", h.TwoFactorSetupForForm)
+				r.Post("/two-factor/setup/for/{adminID}/", h.TwoFactorSetupFor)
 				r.Get("/{app}/", h.AppIndex)
 
 				r.Route("/{app}/{model}", func(r chi.Router) {

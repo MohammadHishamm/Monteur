@@ -33,6 +33,10 @@ type formField struct {
 	RelatedURL   string
 	RelatedLabel string
 	RelatedRepr  string
+	// SetupURL / SetupLabel render an action link next to a secret field
+	// (e.g. "Set up two-factor" for admins.totp_secret).
+	SetupURL   string
+	SetupLabel string
 }
 
 type changeFormData struct {
@@ -324,6 +328,15 @@ func (h *Handler) field(m *site.Model, c schema.Column, row repository.Row, post
 		f.Readonly = isAdd // nothing to clear on a new row
 		if isAdd {
 			f.Display = "Not set"
+		}
+		// The two-factor secret is the one secret the portal can also
+		// populate: assisted enrolment for a colleague standing next to you.
+		if !isAdd && m.Name() == "admins" && c.Name == "totp_secret" {
+			f.SetupURL = h.site.BasePath + "/two-factor/setup/for/" + repository.Stringify(row["id"]) + "/"
+			f.SetupLabel = "Set up two-factor"
+			if f.Display == "Set" {
+				f.SetupLabel = "Replace authenticator"
+			}
 		}
 	}
 

@@ -1,6 +1,7 @@
 {{define "content"}}
 {{$d := .Data}}
-<h1>{{if $d.Enrolled}}Replace your authenticator{{else}}Set up two-factor authentication{{end}}</h1>
+<h1>{{if $d.Assisted}}{{if $d.Enrolled}}Replace the authenticator for {{$d.ForEmail}}{{else}}Set up two-factor authentication for {{$d.ForEmail}}{{end}}{{else}}{{if $d.Enrolled}}Replace your authenticator{{else}}Set up two-factor authentication{{end}}{{end}}</h1>
+{{if $d.Assisted}}<p class="help" style="font-size:.8125rem;margin:-8px 0 16px">Have {{$d.ForEmail}} scan the code on <em>their</em> phone and read you the 6-digit code. This is recorded in the admin log.</p>{{end}}
 <div id="content-main">
   {{if $d.Error}}<p class="errornote">{{$d.Error}}</p>{{end}}
   <fieldset class="module aligned">
@@ -15,7 +16,7 @@
       <label>Or enter the key manually</label>
       <div class="field">
         <code style="font-size:1rem;letter-spacing:1px">{{$d.Secret}}</code>
-        <p class="help">Time-based, 6 digits, 30 seconds. Account: {{$.Admin.Email}}</p>
+        <p class="help">Time-based, 6 digits, 30 seconds. Account: {{$d.ForEmail}}</p>
       </div>
     </div>
     <form method="post">
@@ -25,7 +26,7 @@
         <label for="id_code" class="required">2. Enter the code the app shows</label>
         <div class="field">
           <input type="text" name="code" id="id_code" class="vTextField" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]*" maxlength="8" autofocus required>
-          {{if $d.Enrolled}}<p class="help">Confirming will replace your current authenticator; the old one stops working.</p>{{end}}
+          {{if $d.Enrolled}}<p class="help">Confirming will replace the current authenticator; the old one stops working.</p>{{end}}
         </div>
       </div>
       <div class="submit-row">
