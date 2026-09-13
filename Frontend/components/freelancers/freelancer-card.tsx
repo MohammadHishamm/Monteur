@@ -13,8 +13,8 @@ import type { Freelancer } from "./types";
 export function FreelancerCard({ f }: { f: Freelancer }) {
   return (
     <Link
-      href={`/freelancers/${f.id}`}
-      className="group flex flex-col gap-4 rounded-2xl p-3 transition-all duration-300 hover:-translate-y-1.5"
+      href={`/video-editors/${f.id}`}
+      className="group flex flex-col gap-4 p-3 transition-all duration-300 hover:-translate-y-1"
       style={{
         background: P.card,
         border: `1px solid ${P.border}`,

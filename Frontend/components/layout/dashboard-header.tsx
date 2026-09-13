@@ -27,6 +27,7 @@ import {
     Search,
     Settings,
     User,
+    Users,
     Vibrate,
     Volume2,
     X,
@@ -85,9 +86,17 @@ export function DashboardHeader({
   const dropRef = useRef<HTMLDivElement>(null);
   const bellRef = useRef<HTMLDivElement>(null);
 
+  // A client browses editors; a freelancer browses jobs. Same slot, different
+  // destination — pointing both at the same page sent one of them somewhere
+  // the middleware would only bounce them out of.
+  const browseLink =
+    userRole === "client"
+      ? { icon: Users, label: "تصفح المونتيرين", href: "/video-editors" }
+      : { icon: Briefcase, label: "تصفح المشاريع", href: "/video-jobs" };
+
   const topLinks = [
     { icon: Plus, label: "أضف مشروع", href: "/post-job" },
-    { icon: Briefcase, label: "تصفح المشاريع", href: "/video-jobs" },
+    browseLink,
     { icon: FilePenLine, label: "عروضي", href: "/proposals" },
     { icon: Briefcase, label: "مشاريعي", href: "/projects" },
   ];
