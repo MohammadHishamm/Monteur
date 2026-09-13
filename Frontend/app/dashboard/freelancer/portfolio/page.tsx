@@ -37,7 +37,6 @@ export default function PortfolioPage() {
         userRole="freelancer"
         pageTitle={PAGE_TITLE}
         pageDescription={PAGE_DESC}
-        user={{ name: "مستخدم", email: "", verified: false }}
       >
         <div dir="rtl" className="grid animate-pulse gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => (
@@ -115,8 +114,8 @@ export default function PortfolioPage() {
       pageTitle={PAGE_TITLE}
       pageDescription={PAGE_DESC}
       user={{
-        name: profile.name || "مستخدم",
-        email: profile.email ?? "",
+        name: profile.name || undefined,
+        email: profile.email || undefined,
         avatar: profile.avatar || undefined,
         verified: true,
       }}

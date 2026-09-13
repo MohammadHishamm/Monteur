@@ -1,5 +1,6 @@
 "use client";
 
+import { mergeChromeUser, useCurrentUser, type ChromeUser } from "@/components/layout/use-current-user";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { TierBadge } from "@/components/ui/tier-badge";
 import { cn } from "@/lib/utils";
@@ -29,13 +30,8 @@ import React from "react";
 
 interface DashboardSidebarProps {
   userRole: "client" | "freelancer";
-  user?: {
-    name: string;
-    email: string;
-    avatar?: string;
-    tier?: "bronze" | "silver" | "gold" | "platinum";
-    verified: boolean;
-  };
+  /** Overrides for the fetched user — pass only the fields the page knows. */
+  user?: Partial<ChromeUser>;
   onClose?: () => void;
   /** Always visible on lg+ screens — hides the close button there. */
   persistent?: boolean;
@@ -72,12 +68,13 @@ export function DashboardSidebar({ userRole, user, onClose, persistent = false }
   const pathname = usePathname();
   const navItems = userRole === "client" ? clientNavItems : freelancerNavItems;
 
+  const currentUser = useCurrentUser();
   const userData = {
     name: "مستخدم",
     email: "",
-    tier: undefined,
+    tier: undefined as ChromeUser["tier"],
     verified: false,
-    ...user,
+    ...mergeChromeUser(currentUser, user),
   };
   const initials = userData.name.split(" ").map((n) => n[0]).join("");
 

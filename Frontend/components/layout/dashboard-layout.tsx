@@ -2,19 +2,15 @@
 
 import { Eyebrow } from "@/components/ui/eyebrow";
 import React, { useState } from "react";
+import type { ChromeUser } from "./use-current-user";
 import { DashboardHeader } from "./dashboard-header";
 import { DashboardSidebar } from "./dashboard-sidebar";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
   userRole: "client" | "freelancer";
-  user?: {
-    name: string;
-    email: string;
-    avatar?: string;
-    tier?: "bronze" | "silver" | "gold" | "platinum";
-    verified: boolean;
-  };
+  /** Overrides for the fetched user — pass only the fields the page knows. */
+  user?: Partial<ChromeUser>;
   pageTitle?: string;
   pageDescription?: string;
   eyebrow?: string;

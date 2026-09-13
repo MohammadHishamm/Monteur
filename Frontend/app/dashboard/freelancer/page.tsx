@@ -124,7 +124,6 @@ export default function FreelancerDashboardPage() {
         userRole="freelancer"
         pageTitle="لوحة التحكم"
         pageDescription="نظرة سريعة على العروض، الأعمال الجارية، وتقدّم حسابك."
-        user={{ name: "مستخدم", email: "", verified: false }}
       >
         <Skeleton />
       </DashboardLayout>
@@ -145,12 +144,6 @@ export default function FreelancerDashboardPage() {
       userRole="freelancer"
       pageTitle="لوحة التحكم"
       pageDescription="نظرة سريعة على العروض، الأعمال الجارية، وتقدّم حسابك."
-      user={{
-        name: f.name,
-        email: "",
-        tier: f.tier as "bronze" | "silver" | "gold" | "platinum",
-        verified: true,
-      }}
     >
     <div dir="rtl">
 

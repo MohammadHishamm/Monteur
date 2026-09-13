@@ -1,9 +1,9 @@
 "use client";
 
-import { getNavbarSession } from "@/api/auth/queries";
 import React, { useEffect, useState } from "react";
 import { DashboardHeader } from "@/components/layout/dashboard-header";
 import { DashboardSidebar } from "@/components/layout/dashboard-sidebar";
+import { useCurrentUserType } from "@/components/layout/use-current-user";
 import { MarketingFooter } from "./marketing-footer";
 
 function getCookie(name: string): string | undefined {
@@ -19,46 +19,22 @@ export function MarketingLayout({
   children: React.ReactNode;
   navMode?: "default" | "solid";
 }) {
-  const [userRole, setUserRole] = useState<"client" | "freelancer">("client");
-  const [user, setUser] = useState<{
-    name: string;
-    email: string;
-    avatar?: string;
-    verified: boolean;
-  }>({ name: "مستخدم", email: "", verified: false });
+  // The header and sidebar fetch the signed-in user themselves, so this layout
+  // only has to settle the role. The cookie answers on the first paint; the
+  // session answers authoritatively once it lands.
+  const [cookieRole, setCookieRole] = useState<"client" | "freelancer">("client");
+  const sessionRole = useCurrentUserType();
+  const userRole = sessionRole ?? cookieRole;
+
   const [notifications] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
-
-    void (async () => {
-      const cookieRole = getCookie("user-role") ?? getCookie("user-type") ?? "client";
-      setUserRole(cookieRole as "client" | "freelancer");
-
-      try {
-        const session = await getNavbarSession();
-        if (cancelled) return;
-
-        const hasSession = !!(session.userId || session.email || session.name);
-        if (!hasSession) return;
-
-        setUser({
-          name: session.name?.trim() || "مستخدم",
-          email: session.email ?? "",
-          verified: true,
-        });
-
-        const latestRole = getCookie("user-role") ?? getCookie("user-type") ?? "client";
-        setUserRole(latestRole as "client" | "freelancer");
-      } catch {
-        // keep fallback guest-like defaults when session fetch fails
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
+    // Read after mount, not in a lazy initializer: the server has no cookie
+    // access here, so seeding the first render from it would hydrate-mismatch.
+    const role = getCookie("user-role") ?? getCookie("user-type");
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (role === "client" || role === "freelancer") setCookieRole(role);
   }, []);
 
   return (
@@ -67,7 +43,6 @@ export function MarketingLayout({
       <div className="fixed inset-x-0 top-0 z-50">
         <DashboardHeader
           userRole={userRole}
-          user={user}
           notifications={notifications}
           onMenuClick={() => setSidebarOpen(true)}
         />
@@ -80,11 +55,7 @@ export function MarketingLayout({
           sidebarOpen ? "translate-x-0" : "translate-x-full",
         ].join(" ")}
       >
-        <DashboardSidebar
-          userRole={userRole}
-          user={user}
-          onClose={() => setSidebarOpen(false)}
-        />
+        <DashboardSidebar userRole={userRole} onClose={() => setSidebarOpen(false)} />
       </aside>
 
       {/* Sidebar backdrop */}

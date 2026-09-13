@@ -63,7 +63,6 @@ export default function ClientDashboardPage() {
         userRole="client"
         pageTitle={PAGE_TITLE}
         pageDescription={PAGE_DESC}
-        user={{ name: "مستخدم", email: "", verified: false }}
       >
         <Skeleton />
       </DashboardLayout>
@@ -82,7 +81,6 @@ export default function ClientDashboardPage() {
       userRole="client"
       pageTitle={PAGE_TITLE}
       pageDescription={PAGE_DESC}
-      user={{ name: data.client.name, email: "", verified: true }}
       actions={
         <Link
           href="/post-job"

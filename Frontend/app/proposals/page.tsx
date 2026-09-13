@@ -50,7 +50,6 @@ export default function MyProposalsPage() {
       userRole="freelancer"
       pageTitle={PAGE_TITLE}
       pageDescription={PAGE_DESC}
-      user={{ name: "مستخدم", email: "", verified: true }}
       actions={
         <Link
           href="/jobs"

@@ -7,6 +7,7 @@ import {
     type NavbarNotification,
 } from "@/api/notification/queries";
 import { StudioLogo } from "@/components/brand/studio-logo";
+import { mergeChromeUser, useCurrentUser, type ChromeUser } from "@/components/layout/use-current-user";
 import { subscribeRealtimeNotifications } from "@/lib/socket/realtime";
 import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
@@ -38,12 +39,8 @@ import { userKeys } from "~/api/user/keys";
 
 interface DashboardHeaderProps {
   userRole: "client" | "freelancer";
-  user?: {
-    name: string;
-    email: string;
-    avatar?: string;
-    verified: boolean;
-  };
+  /** Overrides for the fetched user — pass only the fields the page knows. */
+  user?: Partial<ChromeUser>;
   notifications?: number;
   onMenuClick?: () => void;
   /** Hide the menu button on lg+ screens, where the sidebar is always visible. */
@@ -60,7 +57,13 @@ export function DashboardHeader({
   const pathname = usePathname();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const userData = user ?? { name: "مستخدم", email: "", verified: false };
+  const currentUser = useCurrentUser();
+  const userData = {
+    name: "مستخدم",
+    email: "",
+    verified: false,
+    ...mergeChromeUser(currentUser, user),
+  };
   const initial = userData.name.trim()[0]?.toUpperCase() ?? "؟";
 
   const [dropOpen, setDropOpen] = useState(false);

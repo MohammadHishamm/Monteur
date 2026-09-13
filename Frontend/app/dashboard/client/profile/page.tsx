@@ -49,7 +49,6 @@ export default function ClientProfilePage() {
         userRole="client"
         pageTitle={PAGE_TITLE}
         pageDescription={PAGE_DESC}
-        user={{ name: "مستخدم", email: "", verified: false }}
       >
         <div dir="rtl" className="grid animate-pulse grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
           <div className="space-y-4">
@@ -67,7 +66,6 @@ export default function ClientProfilePage() {
         userRole="client"
         pageTitle={PAGE_TITLE}
         pageDescription={PAGE_DESC}
-        user={{ name: "مستخدم", email: "", verified: false }}
       >
         <p dir="rtl" className="bg-white p-5 text-sm" style={{ border: `1px solid ${P.border}`, color: P.muted }}>
           تعذّر تحميل الملف الشخصي. حاول تحديث الصفحة.
@@ -124,7 +122,7 @@ export default function ClientProfilePage() {
       userRole="client"
       pageTitle={PAGE_TITLE}
       pageDescription={PAGE_DESC}
-      user={{ name: displayName, email, verified: Boolean(profile.is_email_verified) }}
+      user={{ name: displayName || undefined, email: email || undefined, verified: Boolean(profile.is_email_verified) }}
       actions={
         <>
           <span className="hidden sm:inline-flex">{savedBadge}</span>
