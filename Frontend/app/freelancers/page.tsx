@@ -19,7 +19,7 @@ import { BG, cardShadow, P } from "@/lib/design-tokens";
 import { toArabicDigits } from "@/lib/format";
 import { ArrowLeft, ChevronDown, Search, SlidersHorizontal, Sparkles, Users, X } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ResWithData, ResWithDataMeta, TListMeta } from "~/types/response";
 
 const PAGE_SIZE = 9;
@@ -107,16 +107,21 @@ export default function BrowseFreelancersPage() {
     [debouncedSearch, filters, sort],
   );
 
+  // Bumped every time the filters change. A load-more request that started
+  // under an older generation must not append its rows to a list that has
+  // since been replaced, nor advance the page counter that goes with it.
+  const generation = useRef(0);
+
   // reset + load first page whenever filters change
   useEffect(() => {
-    let ignore = false;
+    const id = ++generation.current;
     setLoading(true);
     axios
       .get<ResWithDataMeta<Freelancer[], TListMeta>>("/freelancers", {
         params: { ...query, page: 1, pageSize: PAGE_SIZE },
       })
       .then((res) => {
-        if (ignore) return;
+        if (id !== generation.current) return;
         // A zero-result page serializes as `data: null`, not `[]`.
         setItems(Array.isArray(res.data.data) ? res.data.data : []);
         setTotal(res.data.meta?.total ?? 0);
@@ -124,20 +129,19 @@ export default function BrowseFreelancersPage() {
         setLoading(false);
       })
       .catch(() => {
-        if (!ignore) setLoading(false);
+        if (id === generation.current) setLoading(false);
       });
-    return () => {
-      ignore = true;
-    };
   }, [query]);
 
   const loadMore = async () => {
+    const id = generation.current;
     const next = page + 1;
     setLoadingMore(true);
     try {
       const res = await axios.get<ResWithDataMeta<Freelancer[], TListMeta>>("/freelancers", {
         params: { ...query, page: next, pageSize: PAGE_SIZE },
       });
+      if (id !== generation.current) return;
       setItems((prev) => [...prev, ...(Array.isArray(res.data.data) ? res.data.data : [])]);
       setTotal(res.data.meta?.total ?? 0);
       setPage(next);

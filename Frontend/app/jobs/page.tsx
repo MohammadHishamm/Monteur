@@ -18,7 +18,7 @@ import { MarketingLayout } from "@/components/marketing/marketing-layout";
 import { BG, cardShadow, P } from "@/lib/design-tokens";
 import { toArabicDigits } from "@/lib/format";
 import { Briefcase, ChevronDown, Search, SlidersHorizontal, Sparkles, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getJobsList } from "~/api/jobs/queries";
 
 const PAGE_SIZE = 9;
@@ -92,30 +92,41 @@ export default function BrowseJobsPage() {
     [debouncedSearch, filters, sort],
   );
 
+  // Bumped every time the filters change. A load-more request that started
+  // under an older generation must not append its rows to a list that has
+  // since been replaced, nor advance the page counter that goes with it.
+  const generation = useRef(0);
+
   // reset + load first page whenever filters change
   useEffect(() => {
-    let ignore = false;
+    const id = ++generation.current;
     setLoading(true);
-    getJobsList({ ...query, page: 1, pageSize: PAGE_SIZE }).then((res) => {
-      if (ignore) return;
-      setItems(res.items);
-      setTotal(res.total);
-      setPage(1);
-      setLoading(false);
-    });
-    return () => {
-      ignore = true;
-    };
+    getJobsList({ ...query, page: 1, pageSize: PAGE_SIZE })
+      .then((res) => {
+        if (id !== generation.current) return;
+        setItems(res.items);
+        setTotal(res.total);
+        setPage(1);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (id === generation.current) setLoading(false);
+      });
   }, [query]);
 
   const loadMore = async () => {
+    const id = generation.current;
     const nextPage = page + 1;
     setLoadingMore(true);
-    const res = await getJobsList({ ...query, page: nextPage, pageSize: PAGE_SIZE });
-    setItems((prev) => [...prev, ...res.items]);
-    setTotal(res.total);
-    setPage(nextPage);
-    setLoadingMore(false);
+    try {
+      const res = await getJobsList({ ...query, page: nextPage, pageSize: PAGE_SIZE });
+      if (id !== generation.current) return;
+      setItems((prev) => [...prev, ...res.items]);
+      setTotal(res.total);
+      setPage(nextPage);
+    } finally {
+      setLoadingMore(false);
+    }
   };
 
   const activeFilterCount = countActiveFilters(filters);

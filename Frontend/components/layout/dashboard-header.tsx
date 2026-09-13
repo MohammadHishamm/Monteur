@@ -35,7 +35,7 @@ import {
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { signOutNavbar } from "~/api/auth/mutations";
+import { useSignOut } from "~/api/auth/mutations";
 import { userKeys } from "~/api/user/keys";
 
 interface DashboardHeaderProps {
@@ -58,6 +58,7 @@ export function DashboardHeader({
   const pathname = usePathname();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const signOut = useSignOut();
   const currentUser = useCurrentUser();
   const userData = {
     name: "مستخدم",
@@ -263,7 +264,7 @@ export function DashboardHeader({
   };
 
   async function handleSignOut() {
-    await signOutNavbar().catch(() => {});
+    await signOut();
     router.push("/login");
   }
 
