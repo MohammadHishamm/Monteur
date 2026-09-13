@@ -2,23 +2,25 @@
 
 import { Eyebrow } from "@/components/ui/eyebrow";
 import React, { useState } from "react";
+import type { ChromeUser } from "./use-current-user";
 import { DashboardHeader } from "./dashboard-header";
 import { DashboardSidebar } from "./dashboard-sidebar";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
   userRole: "client" | "freelancer";
-  user?: {
-    name: string;
-    email: string;
-    avatar?: string;
-    tier?: "bronze" | "silver" | "gold" | "platinum";
-    verified: boolean;
-  };
+  /** Overrides for the fetched user — pass only the fields the page knows. */
+  user?: Partial<ChromeUser>;
   pageTitle?: string;
   pageDescription?: string;
   eyebrow?: string;
   actions?: React.ReactNode;
+  /**
+   * Give the children the exact remaining viewport height with no padding,
+   * for screens that manage their own scrolling (the chat). Default pages
+   * keep the padded, page-scrolling behaviour.
+   */
+  fill?: boolean;
 }
 
 export function DashboardLayout({
@@ -29,6 +31,7 @@ export function DashboardLayout({
   pageDescription,
   eyebrow,
   actions,
+  fill = false,
 }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -68,8 +71,13 @@ export function DashboardLayout({
       )}
 
       {/* ── Main content — offset top by navbar height, right by sidebar width on lg+ ── */}
-      <div className="flex min-h-screen flex-col pt-16 lg:pr-65">
-        <main className="flex-1">
+      <div
+        className={[
+          "flex flex-col pt-16 lg:pr-65",
+          fill ? "h-dvh overflow-hidden" : "min-h-screen",
+        ].join(" ")}
+      >
+        <main className={fill ? "flex min-h-0 flex-1 flex-col" : "flex-1"}>
           {(pageTitle || pageDescription) && (
             <div className="border-b border-border">
               <div className="flex flex-col gap-4 px-4 py-6 sm:px-6 sm:py-8 sm:flex-row sm:items-end sm:justify-between">
@@ -90,7 +98,7 @@ export function DashboardLayout({
               </div>
             </div>
           )}
-          <div className="p-4 sm:p-6">{children}</div>
+          <div className={fill ? "flex min-h-0 flex-1 flex-col" : "p-4 sm:p-6"}>{children}</div>
         </main>
       </div>
     </div>

@@ -66,7 +66,6 @@ export default function ProfileEditorPage() {
         userRole="freelancer"
         pageTitle={PAGE_TITLE}
         pageDescription={PAGE_DESC}
-        user={{ name: "مستخدم", email: "", verified: false }}
       >
         <ProfileEditorSkeleton />
       </DashboardLayout>
@@ -102,8 +101,8 @@ export default function ProfileEditorPage() {
       pageTitle={PAGE_TITLE}
       pageDescription={PAGE_DESC}
       user={{
-        name: profile.name || "مستخدم",
-        email: profile.email ?? "",
+        name: profile.name || undefined,
+        email: profile.email || undefined,
         avatar: profile.avatar || undefined,
         verified: true,
       }}

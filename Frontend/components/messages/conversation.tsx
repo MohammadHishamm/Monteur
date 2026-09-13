@@ -81,7 +81,7 @@ export function Conversation({
         </div>
         {p.freelancerId && (
           <Link
-            href={`/freelancers/${p.freelancerId}`}
+            href={`/video-editors/${p.freelancerId}`}
             className="hidden h-9 items-center rounded-xl px-3 text-xs font-semibold transition-colors hover:bg-black/5 sm:inline-flex"
             style={{ border: `1px solid ${P.border}`, color: P.text }}
           >
@@ -101,7 +101,7 @@ export function Conversation({
         </span>
         {conv.context.jobId && (
           <Link
-            href={`/jobs/${conv.context.jobId}`}
+            href={`/video-jobs/${conv.context.jobId}`}
             className="ms-auto inline-flex shrink-0 items-center gap-1 text-xs font-semibold"
             style={{ color: P.primaryText }}
           >

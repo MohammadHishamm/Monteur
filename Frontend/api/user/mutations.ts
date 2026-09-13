@@ -15,7 +15,13 @@ export function useSaveMyProfile() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         predicate: ({ queryHash }) =>
-          matchQueryKey(queryHash, [userKeys.profile(), userKeys.session("auth")]),
+          matchQueryKey(queryHash, [
+            userKeys.profile(),
+            userKeys.session("auth"),
+            // The navbar/sidebar read this one — refresh it so a new avatar or
+            // name shows in the chrome right away.
+            userKeys.details.id("auth"),
+          ]),
       })
     },
   })

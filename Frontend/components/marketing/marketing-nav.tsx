@@ -1,6 +1,6 @@
 "use client";
 
-import { signOutNavbar } from "@/api/auth/mutations";
+import { useSignOut } from "@/api/auth/mutations";
 import { getNavbarSession } from "@/api/auth/queries";
 import { markNavbarNotificationRead } from "@/api/notification/mutations";
 import {
@@ -41,6 +41,7 @@ export function MarketingNav({ mode = "default" }: MarketingNavProps) {
   const [dropOpen, setDropOpen] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
   const router = useRouter();
+  const runSignOut = useSignOut();
   const [messageToast, setMessageToast] = useState<{ id: number; href: string } | null>(null);
   const [messageSoundEnabled, setMessageSoundEnabled] = useState(() => {
     if (typeof window === "undefined") return true;
@@ -275,7 +276,7 @@ export function MarketingNav({ mode = "default" }: MarketingNavProps) {
   const navLinks = [browseLink, { label: "كيف يعمل", href: "/how-it-works" }];
 
   async function signOut() {
-    await signOutNavbar();
+    await runSignOut();
     setAuthed(false);
     setRole("");
     setName("");

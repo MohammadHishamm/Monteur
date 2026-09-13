@@ -25,6 +25,8 @@ export interface ChatParticipant {
   role: string
   tier?: Tier
   color: string
+  /** Profile photo URL, when the participant has uploaded one. */
+  avatar?: string
   online?: boolean
   /** Set when the participant is a freelancer → links to /freelancers/[id]. */
   freelancerId?: string
@@ -82,6 +84,7 @@ export interface RawParticipantDto {
   user_id?: string
   role?: string
   user_name?: string
+  user_avatar?: string | null
 }
 
 export interface RawConversationDto {

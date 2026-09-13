@@ -1,7 +1,8 @@
 "use client";
 
 import { getNavbarSession } from "@/api/auth/queries";
-import { StudioLogo } from "@/components/brand/studio-logo";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { useUserRole } from "@/components/layout/use-current-user";
 import { Conversation } from "@/components/messages/conversation";
 import { EmptyConversation } from "@/components/messages/empty-conversation";
 import { ListSkeleton } from "@/components/messages/list-skeleton";
@@ -13,8 +14,7 @@ import type {
 } from "@/components/messages/types";
 import { BG, P } from "@/lib/design-tokens";
 import { subscribeRealtimeNotifications } from "@/lib/socket/realtime";
-import { ArrowRight, Search } from "lucide-react";
-import Link from "next/link";
+import { Search } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
@@ -35,6 +35,7 @@ function mapIncomingMessage(raw: RawMessage, myID: string): ChatMessage {
 
 export default function MessagesPage() {
   const searchParams = useSearchParams();
+  const userRole = useUserRole();
   const [list, setList] = useState<ConversationSummary[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [active, setActive] = useState<ConversationDetail | null>(null);
@@ -160,34 +161,13 @@ export default function MessagesPage() {
   });
 
   return (
-    <div dir="rtl" className="flex h-screen flex-col" style={{ background: BG.subtle }}>
-      {/* top bar */}
-      <header
-        className="z-40 shrink-0 border-b"
-        style={{ background: BG.main, borderColor: P.border }}
+    <DashboardLayout userRole={userRole} fill>
+      <div
+        className="flex min-h-0 flex-1 flex-col p-0 sm:p-4 lg:p-6"
+        style={{ background: BG.subtle }}
       >
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3 lg:px-8">
-          <div className="flex items-center gap-3">
-            <StudioLogo />
-            <Link
-              href="/dashboard/freelancer"
-              className="hidden items-center gap-1.5 text-sm font-medium transition-opacity hover:opacity-70 sm:inline-flex"
-              style={{ color: P.muted }}
-            >
-              <ArrowRight className="size-4" />
-              لوحة التحكم
-            </Link>
-          </div>
-          <h1 className="tracking-tight text-lg font-bold" style={{ color: P.text }}>
-            الرسائل
-          </h1>
-        </div>
-      </header>
-
-      {/* chat shell */}
-      <main className="mx-auto flex w-full max-w-6xl flex-1 overflow-hidden lg:px-8 lg:py-6">
         <div
-          className="flex h-full w-full overflow-hidden"
+          className="flex min-h-0 w-full flex-1 overflow-hidden"
           style={{ border: `1px solid ${P.border}`, background: BG.main }}
         >
           {/* ── thread list ── */}
@@ -196,6 +176,9 @@ export default function MessagesPage() {
             style={{ borderColor: P.border }}
           >
             <div className="shrink-0 border-b p-3" style={{ borderColor: P.border }}>
+              <h1 className="mb-3 px-1 text-base font-bold tracking-tight" style={{ color: P.text }}>
+                الرسائل
+              </h1>
               <div className="relative">
                 <Search
                   className="pointer-events-none absolute inset-y-0 start-3 my-auto size-4"
@@ -205,8 +188,14 @@ export default function MessagesPage() {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="ابحث في المحادثات"
-                  className="w-full border bg-white py-2.5 ps-9 pe-3 text-sm outline-none transition-colors focus:border-[#10B981]"
-                  style={{ borderColor: P.border, color: P.text }}
+                  aria-label="ابحث في المحادثات"
+                  className="h-11 w-full rounded-lg bg-white ps-9 pe-3 text-sm outline-none transition-colors focus:ring-2"
+                  style={{
+                    border: `1px solid ${P.border}`,
+                    color: P.text,
+                    // @ts-expect-error css var for focus ring tint
+                    "--tw-ring-color": `${P.primary}40`,
+                  }}
                 />
               </div>
             </div>
@@ -253,7 +242,7 @@ export default function MessagesPage() {
             )}
           </section>
         </div>
-      </main>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

@@ -67,7 +67,6 @@ function FreelancerWork({
       userRole="freelancer"
       pageTitle="مشاريعي"
       pageDescription="المشاريع التي تعمل عليها والمكتملة."
-      user={{ name: "مستخدم", email: "", verified: true }}
     >
       <div dir="rtl" className="flex flex-col gap-4">
         {isPending ? (
@@ -127,7 +126,6 @@ function ClientWork({
       userRole="client"
       pageTitle="وظائفي"
       pageDescription="الوظائف التي نشرتها والمشاريع التي تعاقدت عليها."
-      user={{ name: "مستخدم", email: "", verified: true }}
       actions={
         <Link
           href="/post-job"

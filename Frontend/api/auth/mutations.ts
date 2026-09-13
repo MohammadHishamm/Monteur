@@ -1,5 +1,6 @@
 import { axios } from "@/lib/api/axios"
-import { useMutation } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useCallback } from "react"
 
 export interface EmailAuthRequest {
   email: string
@@ -60,4 +61,25 @@ export function useRefreshTokenMutation() {
 
 export async function signOutNavbar() {
   await axios.post("/auth/signout")
+}
+
+/**
+ * Sign out and drop the query cache.
+ *
+ * Everything cached belongs to the user who just left — including the identity
+ * the navbar and sidebar render, which is held for five minutes. Navigating to
+ * /login is a client-side push, so the QueryClient survives it; without this
+ * the next person to sign in on this tab would be shown the previous user's
+ * name, photo and tier until the entry went stale.
+ *
+ * The cache is cleared even when the request fails: the user asked to leave,
+ * and their data should not stay in the tab either way.
+ */
+export function useSignOut() {
+  const queryClient = useQueryClient()
+
+  return useCallback(async () => {
+    await signOutNavbar().catch(() => {})
+    queryClient.clear()
+  }, [queryClient])
 }
