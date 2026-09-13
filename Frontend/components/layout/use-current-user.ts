@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { getAuthUserOptions } from "~/api/user/queries";
 
 /** The signed-in user as the navbar and sidebar need them. */
@@ -79,4 +80,34 @@ export function useCurrentUserType(): "client" | "freelancer" | undefined {
   });
   const t = data?.data?.user_type;
   return t === "client" || t === "freelancer" ? t : undefined;
+}
+
+function roleCookie(): "client" | "freelancer" | undefined {
+  if (typeof document === "undefined") return undefined;
+  for (const name of ["user-role", "user-type"]) {
+    const m = document.cookie.match(new RegExp(`(?:^|; )${encodeURIComponent(name)}=([^;]*)`));
+    const v = m ? decodeURIComponent(m[1]) : undefined;
+    if (v === "client" || v === "freelancer") return v;
+  }
+  return undefined;
+}
+
+/**
+ * The role every layout navigates by. The cookie answers on the first paint,
+ * the session answers authoritatively once it lands. Shared so the app shell
+ * and the chat shell can never disagree about which sidebar to show.
+ */
+export function useUserRole(): "client" | "freelancer" {
+  const [cookieRole, setCookieRole] = useState<"client" | "freelancer">("client");
+  const sessionRole = useCurrentUserType();
+
+  useEffect(() => {
+    // Read after mount, not in a lazy initializer: the server has no cookie
+    // access here, so seeding the first render from it would hydrate-mismatch.
+    const role = roleCookie();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (role) setCookieRole(role);
+  }, []);
+
+  return sessionRole ?? cookieRole;
 }
