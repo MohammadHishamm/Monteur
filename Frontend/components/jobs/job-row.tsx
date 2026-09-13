@@ -37,34 +37,39 @@ export function JobRow({ j }: { j: JobSummary }) {
       <div className="flex flex-col gap-5 lg:flex-row lg:gap-6">
         {/* ── MAIN ── */}
         <div className="min-w-0 flex-1">
-          {/* category + urgent + posted */}
-          <div className="flex flex-wrap items-center gap-2.5">
-            <span
-              className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold"
-              style={{ background: `${j.color}10`, color: j.color, border: `1px solid ${j.color}30` }}
-            >
-              <Tag className="size-3" />
-              {CATEGORY_LABELS[j.category]}
-            </span>
+          {/* title leads, urgency sits beside it */}
+          <div className="flex flex-wrap items-start gap-x-2.5 gap-y-2">
+            <h3 className="min-w-0 text-lg font-bold leading-snug lg:text-xl" style={{ color: P.text }}>
+              {j.title}
+            </h3>
             {j.urgent && (
               <span
-                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold"
+                className="mt-1 inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold"
                 style={{ background: `${P.primary}14`, color: P.primaryText, border: `1px solid ${P.primary}33` }}
               >
                 <Zap className="size-3" />
                 عاجل
               </span>
             )}
-            <span className="text-xs" style={{ color: P.muted }}>
-              {j.postedAt}
-            </span>
           </div>
 
-          {/* title + summary */}
-          <h3 className="mt-3 text-lg font-bold leading-snug lg:text-xl" style={{ color: P.text }}>
-            {j.title}
-          </h3>
-          <p className="mt-2 line-clamp-2 text-sm leading-relaxed lg:text-[15px]" style={{ color: P.muted }}>
+          {/* category + who posted it, when */}
+          <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs" style={{ color: P.muted }}>
+            <span
+              className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-semibold"
+              style={{ background: `${j.color}10`, color: j.color, border: `1px solid ${j.color}30` }}
+            >
+              <Tag className="size-3" />
+              {CATEGORY_LABELS[j.category]}
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              {j.clientName}
+              {j.clientVerified && <BadgeCheck className="size-3.5" style={{ color: P.green }} aria-label="موثّق" />}
+            </span>
+            <span>{j.postedAt}</span>
+          </div>
+
+          <p className="mt-2.5 line-clamp-2 text-sm leading-relaxed lg:text-[15px]" style={{ color: P.muted }}>
             {j.summary}
           </p>
 
@@ -88,10 +93,6 @@ export function JobRow({ j }: { j: JobSummary }) {
 
           {/* meta line */}
           <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs" style={{ color: P.muted }}>
-            <span className="inline-flex items-center gap-1.5">
-              {j.clientName}
-              {j.clientVerified && <BadgeCheck className="size-3.5" style={{ color: P.green }} aria-label="موثّق" />}
-            </span>
             <span className="inline-flex items-center gap-1.5">
               <Clock className="size-3.5" />
               {j.duration}
@@ -131,7 +132,7 @@ export function JobRow({ j }: { j: JobSummary }) {
           </div>
 
           <span
-            className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full px-5 text-sm font-semibold transition-transform group-hover:-translate-x-0.5 lg:w-full"
+            className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg px-5 text-sm font-semibold transition-transform group-hover:-translate-x-0.5 lg:w-full"
             style={{ background: `${P.primary}1A`, color: P.primaryText, border: `1px solid ${P.primary}33` }}
           >
             عرض التفاصيل
