@@ -61,6 +61,8 @@ function pickOtherParticipant(conversation: RawConversationDto, myID: string) {
     name,
     role,
     color: "#10B981",
+    // Served through the /uploads proxy, so the raw backend path works as-is.
+    avatar: other?.user_avatar || undefined,
     online: false,
     freelancerId: other?.role === "freelancer" ? other?.user_id : undefined,
   }
